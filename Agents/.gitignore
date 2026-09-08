@@ -1,0 +1,27 @@
+# 1. Secrets and API keys (CRITICAL - never commit keys to Git!)
+.env
+.env.*
+*.env
+
+# 2. Virtual Environments
+.venv/
+venv/
+env/
+
+# 3. Python Caches and Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 4. OS-specific files
+.DS_Store
+Thumbs.db
+
+# 5. Build and Distribution artifacts
+build/
+dist/
+*.egg-info/
+
+# 6. IDE / Editor settings
+.vscode/
+.idea/
