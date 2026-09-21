@@ -1,0 +1,4 @@
+.env
+node_modules/
+changes_made.md
+tests/
