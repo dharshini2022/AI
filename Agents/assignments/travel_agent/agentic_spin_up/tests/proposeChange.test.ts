@@ -1,15 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { HITLRequest } from "langchain";
 import { Hitl } from "../travel_agent/hitl.ts";
-import { applyChange, findCandidate, formatChangeBox, MAX_PROPOSAL_TRIES, mealOf, ProposalTracker } from "../travel_agent/tools/proposals.ts";
+import {
+  applyChange,
+  buildChangeSummary,
+  type ChangeSummary,
+  findCandidate,
+  formatChangeLine,
+  formatChangeTable,
+  MAX_PROPOSAL_TRIES,
+  mealOf,
+  ProposalTracker,
+} from "../travel_agent/tools/proposals.ts";
 
-// Builds the same shape the real humanInTheLoopMiddleware interrupt carries for one propose_change call,
-// so Hitl.reviewToolCalls (the client side of the interrupt/resume cycle — see
+// Builds the same shape the real humanInTheLoopMiddleware interrupt carries for one propose_change call —
+// `description`, when given, is the JSON ChangeSummary the real middleware now sends (proposeChange.ts) — so
+// Hitl.reviewToolCalls (the client side of the interrupt/resume cycle — see
 // concepts/features/human-in-the-loop.md) can be exercised directly without a real LangGraph run.
-function proposeChangeRequest(args: Record<string, unknown>): HITLRequest {
+function proposeChangeRequest(args: Record<string, unknown>, description?: string): HITLRequest {
   return {
-    actionRequests: [{ name: "propose_change", args }],
+    actionRequests: [{ name: "propose_change", args, description }],
     reviewConfigs: [{ actionName: "propose_change", allowedDecisions: ["approve", "reject"] }],
+  } as HITLRequest;
+}
+
+function batchRequest(...changes: { args: Record<string, unknown>; description: string }[]): HITLRequest {
+  return {
+    actionRequests: changes.map((c) => ({ name: "propose_change", ...c })),
+    reviewConfigs: changes.map(() => ({ actionName: "propose_change", allowedDecisions: ["approve", "reject"] })),
   } as HITLRequest;
 }
 
@@ -102,16 +120,41 @@ describe("applyChange — the single-item merge into the live result", () => {
   });
 });
 
-describe("formatChangeBox", () => {
-  it("shows the saving and the try count", () => {
-    const box = formatChangeBox("place", { name: "Wonderla Park", est_cost: 1200 }, { name: "Cubbon Park", est_cost: 0 }, "Wonderla Park", 1);
-    expect(box).toContain("try 1 of 3");
-    expect(box).toContain("Saves ₹1200");
+describe("buildChangeSummary / formatChangeTable / formatChangeLine", () => {
+  const wonderlaToCubbon = () =>
+    buildChangeSummary("place", { name: "Wonderla Park", est_cost: 1200 }, { name: "Cubbon Park", est_cost: 0 }, "Wonderla Park", "Cubbon Park", 2, 1);
+
+  it("computes the saving from the two items' costs", () => {
+    const summary = wonderlaToCubbon();
+    expect(summary).toMatchObject({ removeCost: 1200, addCost: 0, saving: 1200, day: 2, attempt: 1 });
   });
 
-  it("flags a missing candidate instead of claiming a cost", () => {
-    const box = formatChangeBox("place", { name: "Wonderla Park", est_cost: 1200 }, null, "Wonderla Park", 1);
-    expect(box).toContain("not found in the latest search");
+  it("leaves saving null when either item's cost is unknown, rather than guessing", () => {
+    const summary = buildChangeSummary("place", { name: "Wonderla Park", est_cost: 1200 }, null, "Wonderla Park", "Cubbon Park", 2, 1);
+    expect(summary.saving).toBeNull();
+    expect(summary.addCost).toBeNull();
+  });
+
+  it("carries the invalid reason through, when given", () => {
+    const summary = buildChangeSummary("place", null, null, "Wonderla Park", "Cubbon Park", 2, 4, "limit_reached");
+    expect(summary.invalid).toBe("limit_reached");
+  });
+
+  it("formatChangeLine shows the try count only above try 1, and flags an invalid proposal", () => {
+    expect(formatChangeLine(wonderlaToCubbon(), 1, 1)).not.toContain("try");
+    const retried = { ...wonderlaToCubbon(), attempt: 2 };
+    expect(formatChangeLine(retried, 1, 1)).toContain("try 2 of 3");
+    const invalid: ChangeSummary = { ...wonderlaToCubbon(), invalid: "already_rejected" };
+    expect(formatChangeLine(invalid, 1, 1)).toContain("already said no");
+  });
+
+  it("formatChangeTable lists every row and totals only the positive savings", () => {
+    const costly = buildChangeSummary("restaurant", { name: "Cafe A", est_cost: 100 }, { name: "Cafe B", est_cost: 500 }, "Cafe A", "Cafe B", 1, 1);
+    const table = formatChangeTable([wonderlaToCubbon(), costly]);
+    expect(table).toContain("Wonderla Park");
+    expect(table).toContain("Cubbon Park");
+    expect(table).toContain("Cafe A");
+    expect(table).toContain("Total possible saving: ₹1200"); // costly's -400 isn't counted as a saving
   });
 });
 
@@ -141,5 +184,38 @@ describe("Hitl.reviewToolCalls — the propose_change reject/approve path", () =
     }
     expect(lastMessage).toContain("limit_reached");
     expect(hitl.proposals.attemptsFor(hitl.proposals.key("place", "Wonderla Park"))).toBe(MAX_PROPOSAL_TRIES);
+  });
+
+  it("prints one table for a batch of proposals, then a compact line per item — not a repeated box", async () => {
+    const wonderla = buildChangeSummary("place", { name: "Wonderla Park", est_cost: 1200 }, { name: "Cubbon Park", est_cost: 0 }, "Wonderla Park", "Cubbon Park", 2, 1);
+    const cafe = buildChangeSummary("restaurant", { name: "Cafe A", est_cost: 500 }, { name: "Cafe B", est_cost: 300 }, "Cafe A", "Cafe B", 1, 1);
+    const hitl = new Hitl(["yes", "yes"]);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await hitl.reviewToolCalls(
+      batchRequest(
+        { args: { kind: "place", day: 2, replace: "Wonderla Park", with: "Cubbon Park" }, description: JSON.stringify(wonderla) },
+        { args: { kind: "restaurant", day: 1, replace: "Cafe A", with: "Cafe B" }, description: JSON.stringify(cafe) },
+      ),
+    );
+
+    const printed = log.mock.calls.map((c) => String(c[0]));
+    expect(printed.filter((line) => line.includes("changes proposed"))).toHaveLength(1); // the table, once
+    expect(printed.some((line) => line.includes("[1/2]") && line.includes("Wonderla Park"))).toBe(true);
+    expect(printed.some((line) => line.includes("[2/2]") && line.includes("Cafe A"))).toBe(true);
+    log.mockRestore();
+  });
+
+  it("does not print a table for a single proposal — just its compact line", async () => {
+    const wonderla = buildChangeSummary("place", { name: "Wonderla Park", est_cost: 1200 }, { name: "Cubbon Park", est_cost: 0 }, "Wonderla Park", "Cubbon Park", 2, 1);
+    const hitl = new Hitl(["yes"]);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    await hitl.reviewToolCalls(proposeChangeRequest({ kind: "place", day: 2, replace: "Wonderla Park", with: "Cubbon Park" }, JSON.stringify(wonderla)));
+
+    const printed = log.mock.calls.map((c) => String(c[0]));
+    expect(printed.some((line) => line.includes("changes proposed"))).toBe(false);
+    expect(printed.some((line) => line.includes("[1/1]"))).toBe(true);
+    log.mockRestore();
   });
 });

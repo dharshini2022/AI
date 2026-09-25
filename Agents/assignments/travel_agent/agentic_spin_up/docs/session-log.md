@@ -28,3 +28,14 @@ Unfinished: nothing for this feature. Two known, accepted gaps: two place_agent 
 overlap (staging is a single on/off flag, not a counter), and re-researching a new transport date/route when
 every option is over budget has no lever any more (see `BACKLOG.md`).
 Next step: none queued. `npx tsc --noEmit` and `npx vitest run` both pass (284/284).
+
+## 2026-09-25 (later)
+What we did: The user hit a real usability problem in practice — a single budget re-check can propose many
+changes at once (they pasted a raw 9-item interrupt payload, unreadable as a debug dump), and even the
+intended box-per-item rendering would have meant 9 stacked ASCII boxes. Reworked `propose_change`'s approval
+output: the middleware now sends a small JSON `ChangeSummary` (data only) instead of a formatted box, and
+`Hitl.reviewToolCalls` does the formatting — one table up front for a batch of 2+ proposals (every row, a
+total possible saving, a `⚠` flag for anything invalid), then each item confirmed on its own compact line
+(not a box) — still exactly one yes/no per item, per the existing rule.
+Unfinished: nothing for this change.
+Next step: none queued. `npx tsc --noEmit` and `npx vitest run` both pass (289/289).

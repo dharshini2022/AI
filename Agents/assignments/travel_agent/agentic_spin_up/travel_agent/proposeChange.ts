@@ -7,8 +7,9 @@ import { humanInTheLoopMiddleware, tool } from "langchain";
 import { z } from "zod";
 import {
   applyChange,
+  buildChangeSummary,
   findCandidate,
-  formatChangeBox,
+  type InvalidReason,
   MAX_PROPOSAL_TRIES,
   mealOf,
   type ProposalKind,
@@ -69,34 +70,32 @@ export function createProposeChangeTool(scratchpad: Scratchpad, tracker: Proposa
   );
 }
 
-// The description is built entirely from code — the live item (from the scratchpad's current result) and the
-// staged candidate (from the draft the search just wrote) — never from the model's own claim about the change.
-// It also flags, in the box itself, when the proposal can't actually be applied (candidate missing, already
-// rejected, or the retry limit is used up) — a defence-in-depth signal for whoever is answering the prompt,
-// on top of the tool body's own refusal to commit in those cases.
+// The description is a JSON-encoded ChangeSummary, not formatted text — built entirely from code (the live
+// item, the staged candidate, and the tracker's retry state), never from the model's own claim about the
+// change. Hitl.reviewToolCalls is what turns this into what the person actually sees: a table across a whole
+// batch, then a compact line per item (see tools/proposals.ts's formatChangeTable/formatChangeLine and
+// concepts/features/human-in-the-loop.md). `invalid` flags a proposal that can't actually be applied
+// (candidate missing, already rejected, or the retry limit used up) — a defence-in-depth signal on top of the
+// tool body's own refusal to commit in those cases.
 export function createProposeChangeMiddleware(scratchpad: Scratchpad, tracker: ProposalTracker) {
   return humanInTheLoopMiddleware({
     interruptOn: {
       propose_change: {
         allowedDecisions: ["approve", "reject"],
         description: (toolCall) => {
-          const { kind, replace, with: candidate } = toolCall.args as Dict;
+          const { kind, day, replace, with: candidate } = toolCall.args as Dict;
           const k = kind as ProposalKind;
           const toolName = toolForKind(k);
           const oldItem = findCandidate(k, scratchpad.output(toolName), String(replace ?? ""));
           const newItem = findCandidate(k, scratchpad.stagedOutput(toolName), String(candidate ?? ""));
           const key = tracker.key(k, String(replace ?? ""));
-          const box = formatChangeBox(k, oldItem, newItem, String(replace ?? ""), tracker.attemptsFor(key) + 1);
-          if (tracker.attemptsFor(key) >= MAX_PROPOSAL_TRIES) {
-            return `${box}\n⚠ The retry limit for this change was already used — reject this and it will stop being proposed.`;
-          }
-          if (tracker.alreadyRejected(key, String(candidate ?? ""))) {
-            return `${box}\n⚠ You already rejected this exact candidate — reject this too.`;
-          }
-          if (!newItem) {
-            return `${box}\n⚠ This candidate wasn't found in the latest search — reject this.`;
-          }
-          return box;
+          const attempt = tracker.attemptsFor(key) + 1;
+          let invalid: InvalidReason | undefined;
+          if (tracker.attemptsFor(key) >= MAX_PROPOSAL_TRIES) invalid = "limit_reached";
+          else if (tracker.alreadyRejected(key, String(candidate ?? ""))) invalid = "already_rejected";
+          else if (!newItem) invalid = "not_found";
+          const summary = buildChangeSummary(k, oldItem, newItem, String(replace ?? ""), String(candidate ?? ""), (day as number | null) ?? null, attempt, invalid);
+          return JSON.stringify(summary);
         },
       },
     },

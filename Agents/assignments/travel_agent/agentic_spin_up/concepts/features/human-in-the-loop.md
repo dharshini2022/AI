@@ -19,7 +19,7 @@ The fix wasn't to build resume plumbing for all four uniformly — it was to ask
 - **`ask_user`** — pure data collection ("what's the value of X?"). Used for iterative requirement gathering (STEP 1, one field at a time), relaying sub-agent doubts, asking for a raised budget figure, and the plan confirm prompt (STEP 4: an empty answer means approved — see [scratchpad.md](scratchpad.md)). There's no proposed *action* to approve; the answer *is* the payload. The interrupt protocol's approve/edit/reject vocabulary has no slot for "here's arbitrary data" (the closest fit, `reject` with a `message`, frames every normal answer as a tool *error*, which is a workaround, not a fit).
 - **`choose_transport`** — picking one of several fare-only options. There's nothing to approve here: the user is the one choosing, directly, from a list; nobody else's decision needs review.
 - **`set_indoor_mode`** — a single yes/no on one proposed action ("switch to indoor because of this forecast?"), with no data the tool needs to compute first. Genuine fit for `interruptOn`.
-- **`propose_change`** — a place agent tool, gated by `interruptOn`, used to swap one place, restaurant or accommodation for a candidate it just researched (a budget re-check, or the user's own edit request). Unlike `choose_transport`, the *thing being reviewed* (a candidate from a search) genuinely doesn't exist until a tool has run — so this is exactly the "run the real tool first, then interrupt with the real result" case the `choose_transport` note above used to flag as a future custom-middleware change. It's solved differently here: the search tool (`places_search`/`restaurants_search`/`accommodation_search`) runs and writes to a **draft** (`Scratchpad.setStaging`/`stagedOutput`), not live, and `propose_change` — the tool that *is* gated — is a second, separate call the place agent makes once it has decided what to propose. Its `description` is built by code from the live item and the staged candidate (`travel_agent/proposeChange.ts`), never from the model's own claim. See "The draft → propose → approve flow" below.
+- **`propose_change`** — a place agent tool, gated by `interruptOn`, used to swap one place, restaurant or accommodation for a candidate it just researched (a budget re-check, or the user's own edit request). Unlike `choose_transport`, the *thing being reviewed* (a candidate from a search) genuinely doesn't exist until a tool has run — so this is exactly the "run the real tool first, then interrupt with the real result" case the `choose_transport` note above used to flag as a future custom-middleware change. It's solved differently here: the search tool (`places_search`/`restaurants_search`/`accommodation_search`) runs and writes to a **draft** (`Scratchpad.setStaging`/`stagedOutput`), not live, and `propose_change` — the tool that *is* gated — is a second, separate call the place agent makes once it has decided what to propose. Its `description` is a JSON-encoded summary built by code from the live item and the staged candidate (`travel_agent/tools/proposals.ts`'s `buildChangeSummary`), never from the model's own claim — data only, not display text; `Hitl` decides how to show it (see "The draft → propose → approve flow" below).
 - **`book_transportation`** (then named `book_flight`) — was once registered here too, but is no longer an LLM tool. It was consequential and admin-gated with fixed arguments, yet the model decided *when* to call it, and the approval pause fired before the role check, so a non-admin was asked to approve something they could never do. Booking is now a code-triggered step after the plan is confirmed (`offerBooking` in `mainAgent.ts`): code checks the role, shows the booking box, and asks a plain yes/no through `Hitl.askYesNo`. See [rbac.md](rbac.md).
 
 So `ask_user` and `choose_transport` stay plain, ungated `Hitl` calls, and the booking yes/no is a code-triggered `Hitl.askYesNo`. `set_indoor_mode` and `propose_change` are registered under `interruptOn`, and are the two tools where the interrupt/resume cycle is completed end-to-end — `set_indoor_mode` for the Main Agent, `propose_change` for place_agent (only place_agent gets it; every other sub-agent's tools are still resolved from its spec's plain MCP tool list, see `SpinUp.placeAgentExtras` in `spinUp.ts`).
@@ -40,18 +40,22 @@ a tool has run. `propose_change` splits the two:
  ─────────────────────────────►   not the live scratchpad slot
                                    the rest of the app reads
  propose_change(kind, day,        Middleware pauses the run;
- replace, with) ──────────────►   description built from the
-                                   live item + the staged
-                                   candidate ───────────────►   sees the before/after box
+ replace, with) ──────────────►   builds a ChangeSummary (JSON)
+ (often several calls in           from the live item + the
+ one turn — a budget cut           staged candidate ─────────►   Hitl renders it: one table
+ rarely touches just one item)                                   for a batch, then each item
+                                                                   confirmed on its own compact
+                                                                   line (see below) — never a
+                                                                   raw dump of the interrupt
                                                                        │
-                       ┌───────── approve ◄─────────────────────── yes/no
+                       ┌───────── approve ◄─────────────────────── yes/no, per item
                        │                                              │
-              tool body commits                              reject: synthetic ToolMessage
-              draft → live                                    back to place_agent — the tool
-              (Scratchpad.commitStaged)                        body never runs; a rejection
-                                                                 counter and "don't propose
-                                                                 this candidate again" list
-                                                                 (ProposalTracker, tracked in
+              tool body merges                               reject: synthetic ToolMessage
+              just the one approved                           back to place_agent — the tool
+              item into the live                               body never runs; a rejection
+              result (Scratchpad.publish                       counter and "don't propose
+              + applyChange) — never the                       this candidate again" list
+              rest of the re-searched list                     (ProposalTracker, tracked in
                                                                  Hitl since the tool body can't
                                                                  run here) drive the retry, up
                                                                  to 3 tries per item, then
@@ -61,6 +65,21 @@ a tool has run. `propose_change` splits the two:
 `recheckBudget`/`requestPlaceEdit` open staging before sending place_agent its turn and close it (discarding
 any leftover draft) in a `finally`, so a rejected or abandoned proposal never leaks into the next read — see
 `budget-recheck.md` and `concepts/architecture/scratchpad.md`.
+
+**Why the description is data, not a formatted box.** `humanInTheLoopMiddleware`'s `description` callback
+runs once per action and can only return a string — but when place_agent proposes several changes in one
+turn (the common case for a budget cut), all of them arrive in `Hitl.reviewToolCalls` as one `HITLRequest`
+with several `actionRequests`. Showing each as its own fully-formatted box would mean stacking several boxes
+with no sense of the total picture — and the raw `HITLRequest`/`Interrupt` object, if ever printed directly,
+looks exactly like debugging output, not something meant for a person to read. So `createProposeChangeMiddleware`
+(`travel_agent/proposeChange.ts`) puts a `ChangeSummary` — plain data: kind, day, the two item names, their
+costs, the saving, the attempt count, and whether the proposal is even valid — into `description` as JSON.
+`Hitl.reviewToolCalls` parses every `propose_change` action's summary and, only for a batch of more than one,
+prints `formatChangeTable` once up front (every row, a `⚠` marker for anything invalid, and a total possible
+saving); it then confirms each item on its own `formatChangeLine` — a single line, not a box — asking
+approve/reject one at a time exactly as before. A single proposal skips the table and goes straight to its
+line. Both builders live in `travel_agent/tools/proposals.ts`, pure functions with no I/O, in the same spirit
+as `formatWeatherBox`/`formatBookingBox` above.
 
 ```
  An agent proposes a tool call

@@ -78,32 +78,91 @@ export function applyChange(kind: ProposalKind, liveOutput: unknown, replace: st
 
 export { mealOf };
 
-// One line describing a candidate for the box: name, cost, and (for a stay) how far it is from the day it
-// would serve, when that distance is known.
-function candidateLine(kind: ProposalKind, item: Dict | null, fallbackName: string): string {
-  if (!item) return `${fallbackName} — not found in the latest search`;
-  const cost = costOf(kind, item);
-  const unit = kind === "accommodation" ? "/night" : "";
-  return `${get(item, "name", fallbackName)} — ₹${fmtFixed(cost, 0)}${unit}`;
+// Why a proposal can't actually be applied even if the user says yes — checked by the tool body too
+// (proposeChange.ts) as a backstop, but surfaced here so the person deciding sees it up front.
+export type InvalidReason = "not_found" | "already_rejected" | "limit_reached";
+
+const INVALID_LABEL: Record<InvalidReason, string> = {
+  not_found: "not found in the latest search",
+  already_rejected: "you already said no to this candidate",
+  limit_reached: "retry limit already used — reject this",
+};
+
+// Structured data for one proposed change — deliberately not pre-formatted text. `createProposeChangeMiddleware`
+// (proposeChange.ts) builds this from the live/staged items and JSON-encodes it as the interrupt's
+// `description`; Hitl.reviewToolCalls does all the human-facing formatting (a table for a batch, a compact
+// line per item — see formatChangeTable/formatChangeLine below), rather than the middleware baking in one
+// fixed box per item regardless of how many arrive in the same turn.
+export interface ChangeSummary {
+  kind: ProposalKind;
+  day: number | null;
+  replace: string;
+  with: string;
+  removeCost: number | null;
+  addCost: number | null;
+  saving: number | null; // removeCost - addCost; null when either cost is unknown
+  attempt: number;
+  invalid?: InvalidReason;
 }
 
-// Pure text builder for the propose_change approval box, in the same style as formatWeatherBox/
-// formatBookingBox (hitl.ts) — no I/O, built entirely by code from the current live item and the staged
-// candidate, never from the model's own description of the change.
-export function formatChangeBox(kind: ProposalKind, oldItem: Dict | null, newItem: Dict | null, replace: string, attempt: number): string {
-  const oldCost = oldItem ? costOf(kind, oldItem) : null;
-  const newCost = newItem ? costOf(kind, newItem) : null;
-  const delta = oldCost != null && newCost != null ? oldCost - newCost : null;
-  const effect = delta == null ? "Cost unknown" : delta > 0 ? `Saves ₹${fmtFixed(delta, 0)}` : delta < 0 ? `Costs ₹${fmtFixed(-delta, 0)} more` : "Same cost";
-  const lines = [
-    `\nReplace this ${kind}?\n`,
-    `┌ Proposed Change (try ${attempt} of ${MAX_PROPOSAL_TRIES}) ─────────────────────────────`,
-    `│ Remove : ${candidateLine(kind, oldItem, replace)}`,
-    `│ Add    : ${candidateLine(kind, newItem, "(unnamed candidate)")}`,
-    `│ Effect : ${effect}`,
-    `└───────────────────────────────────────────────────────────────────`,
-  ];
-  return lines.join("\n");
+export function buildChangeSummary(
+  kind: ProposalKind,
+  oldItem: Dict | null,
+  newItem: Dict | null,
+  replace: string,
+  withName: string,
+  day: number | null,
+  attempt: number,
+  invalid?: InvalidReason,
+): ChangeSummary {
+  const removeCost = oldItem ? costOf(kind, oldItem) : null;
+  const addCost = newItem ? costOf(kind, newItem) : null;
+  const saving = removeCost != null && addCost != null ? removeCost - addCost : null;
+  return { kind, day, replace, with: withName, removeCost, addCost, saving, attempt, ...(invalid ? { invalid } : {}) };
+}
+
+const truncate = (name: string, max = 26): string => (name.length > max ? `${name.slice(0, max - 1)}…` : name);
+
+function costLabel(kind: ProposalKind, cost: number | null): string {
+  if (cost == null) return "?";
+  return `₹${fmtFixed(cost, 0)}${kind === "accommodation" ? "/night" : ""}`;
+}
+
+function savingLabel(summary: ChangeSummary): string {
+  if (summary.saving == null) return "cost unknown";
+  if (summary.saving > 0) return `saves ₹${fmtFixed(summary.saving, 0)}`;
+  if (summary.saving < 0) return `costs ₹${fmtFixed(-summary.saving, 0)} more`;
+  return "same cost";
+}
+
+// One table for a whole batch of proposals — the overview the compact per-item prompts (formatChangeLine)
+// then confirm one at a time. `attempt` is only shown per row when above 1, so a fresh batch (the common
+// case) isn't cluttered with "try 1 of 3" on every line.
+export function formatChangeTable(summaries: ChangeSummary[]): string {
+  const totalSaving = summaries.reduce((sum, s) => sum + (s.saving && s.saving > 0 ? s.saving : 0), 0);
+  const header = " #  Day  Kind        Remove                      →  Add                         Save";
+  const rows = summaries.map((s, i) => {
+    const day = s.day == null ? "-" : String(s.day);
+    const flag = s.invalid ? ` ⚠ ${INVALID_LABEL[s.invalid]}` : "";
+    const tryTag = s.attempt > 1 ? ` (try ${s.attempt} of ${MAX_PROPOSAL_TRIES})` : "";
+    return (
+      `${String(i + 1).padStart(2)}  ${day.padStart(3)}  ${s.kind.padEnd(11)} ${truncate(s.replace).padEnd(27)} →  ` +
+      `${truncate(s.with).padEnd(27)} ${savingLabel(s)}${tryTag}${flag}`
+    );
+  });
+  return [`\n${summaries.length} changes proposed:\n`, header, ...rows, `\nTotal possible saving: ₹${fmtFixed(totalSaving, 0)}`].join("\n");
+}
+
+// The confirm prompt for one item — printed right before asking approve/reject for it, so the person deciding
+// doesn't have to scroll back up to the table to remember what row N was.
+export function formatChangeLine(summary: ChangeSummary, index: number, total: number): string {
+  const day = summary.day == null ? "" : `Day ${summary.day}, `;
+  const tryTag = summary.attempt > 1 ? ` [try ${summary.attempt} of ${MAX_PROPOSAL_TRIES}]` : "";
+  const flag = summary.invalid ? ` ⚠ ${INVALID_LABEL[summary.invalid]}` : "";
+  return (
+    `[${index}/${total}]${tryTag} ${day}${summary.kind}: ${truncate(summary.replace)} (${costLabel(summary.kind, summary.removeCost)}) ` +
+    `→ ${truncate(summary.with)} (${costLabel(summary.kind, summary.addCost)}) — ${savingLabel(summary)}${flag}`
+  );
 }
 
 // Per-item retry state for one trip: how many times this exact change has been rejected, and which

@@ -3,7 +3,14 @@ import type { HITLRequest, HITLResponse } from "langchain";
 import { z } from "zod";
 import type { StdinChannel } from "./stdin.ts";
 import { type BookingDetails, type BudgetRecheck, renderCards } from "./tools/index.ts";
-import { MAX_PROPOSAL_TRIES, type ProposalKind, ProposalTracker } from "./tools/proposals.ts";
+import {
+  type ChangeSummary,
+  formatChangeLine,
+  formatChangeTable,
+  MAX_PROPOSAL_TRIES,
+  type ProposalKind,
+  ProposalTracker,
+} from "./tools/proposals.ts";
 import type { Dict } from "./tools/util.ts";
 
 const YES = new Set(["y", "yes", "ok", "sure", "yeah"]);
@@ -130,15 +137,40 @@ export class Hitl {
     return this.askUser(question);
   }
 
-  // Renders a paused interrupt's action requests and collects an approve/reject decision
-  // per action, resuming the LangGraph run that raised it.
+  // A propose_change action's description is a JSON ChangeSummary (see proposeChange.ts), not display text —
+  // parsed here so reviewToolCalls can format it itself. Falls back to null (and the raw-description path
+  // below) if it's ever not valid JSON, so a malformed description degrades gracefully instead of throwing.
+  private parseChangeSummary(action: HITLRequest["actionRequests"][number]): ChangeSummary | null {
+    if (action.name !== "propose_change" || !action.description) return null;
+    try {
+      return JSON.parse(action.description) as ChangeSummary;
+    } catch {
+      return null;
+    }
+  }
+
+  // Renders a paused interrupt's action requests and collects an approve/reject decision per action,
+  // resuming the LangGraph run that raised it. A batch of propose_change actions (the common case when
+  // place_agent proposes several changes in one turn) gets one table up front — current_implementation.md's
+  // batch-output redesign — so the person deciding sees the whole picture before confirming each one on its
+  // own compact line, instead of a wall of repeated boxes.
   reviewToolCalls(request: HITLRequest): Promise<HITLResponse> {
     return this.serial(async () => {
+      const summaries = request.actionRequests.map((action) => this.parseChangeSummary(action));
+      const batch = summaries.filter((s): s is ChangeSummary => s !== null);
+      if (batch.length > 1) console.log(formatChangeTable(batch));
+
       const decisions: HITLResponse["decisions"] = [];
+      let shown = 0;
       for (let i = 0; i < request.actionRequests.length; i++) {
         const action = request.actionRequests[i];
         const config = request.reviewConfigs[i];
-        console.log(action.description ?? `\nTool execution requires approval\n\nTool: ${action.name}`);
+        const summary = summaries[i];
+        if (summary) {
+          console.log(formatChangeLine(summary, ++shown, batch.length));
+        } else {
+          console.log(action.description ?? `\nTool execution requires approval\n\nTool: ${action.name}`);
+        }
         const raw = await this.input(`Approve ${action.name}? (yes/no)\n> `);
         if (YES.has(raw.trim().toLowerCase()) && config.allowedDecisions.includes("approve")) {
           if (action.name === "propose_change") this.proposals.reset(this.proposalKey(action.args));
