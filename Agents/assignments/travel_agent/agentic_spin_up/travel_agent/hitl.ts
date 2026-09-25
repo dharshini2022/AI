@@ -181,8 +181,10 @@ export class Hitl {
           // agent — happens here, on the client side of the interrupt, instead of in the tool itself.
           decisions.push({ type: "reject", message: this.rejectProposal(action.args) });
         } else {
-          const reason = await this.input("Reason (optional):\n> ");
-          decisions.push({ type: "reject", message: reason || undefined });
+          // No free-text reason prompt: a plain "no" is enough here (unlike propose_change, there's no retry
+          // to steer). humanInTheLoopMiddleware supplies its own default rejection message ("User rejected
+          // the tool call for '<name>'...") when none is given — see main_agent.md's set_indoor_mode note.
+          decisions.push({ type: "reject" });
         }
       }
       return { decisions };

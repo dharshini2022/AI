@@ -339,7 +339,10 @@ export class SpinUp {
       record.finishedAt = Date.now();
     }
 
-    const detail = record.status === "needs_clarification" ? `: ${record.reply?.needs_clarification}` : record.error ? `: ${record.error}` : "";
+    // needs_clarification's own text isn't repeated here — whoever asked for it (recheckBudget/
+    // requestPlaceEdit's while loop, via hitl.askUser("The place agent asks: ...")) is about to print it as
+    // the actual question the user answers; showing it twice was pure noise on the CLI.
+    const detail = record.status === "needs_clarification" ? " (question pending)" : record.error ? `: ${record.error}` : "";
     console.log(`  [Main Agent] ${ICONS[record.status]} ${record.id} ${record.status} after ${this.seconds(record)}s${detail}`);
 
     const next = record.status === "stopped" ? undefined : record.inbox.shift();
