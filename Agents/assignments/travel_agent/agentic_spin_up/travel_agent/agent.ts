@@ -2,10 +2,13 @@
 
 import { Command, type BaseCheckpointSaver } from "@langchain/langgraph";
 import type { AnyAgentMiddleware, HITLRequest, HITLResponse } from "langchain";
-import { createAgent } from "langchain";
+import { createAgent, dynamicSystemPromptMiddleware } from "langchain";
 import { settings } from "./config.ts";
 import { getChatModel } from "./llm.ts";
-import type { McpTools, ToolResultHandler } from "./mcpClient.ts";
+import type { McpTools, ToolGuard, ToolResultHandler } from "./mcpClient.ts";
+import type { Principal } from "./rbac/rbac.ts";
+import { createRbacMiddleware } from "./rbac/rbacMiddleware.ts";
+import { createLoadSkillTool, skillCatalog } from "./skillLoader.ts";
 import type { AgentSpec } from "./specs.ts";
 import { type Dict, isDict, pyTitle } from "./tools/util.ts";
 
@@ -27,8 +30,9 @@ export function lastMessageText(response: { messages?: { content?: unknown }[] }
 }
 
 function systemPrompt(spec: AgentSpec): string {
-  if (!spec.output) return spec.body;
-  return `${spec.body}\n\nWhen you finish a turn, reply with ONLY a JSON object of this shape and nothing else:\n${spec.output}`;
+  const withSkills = spec.body + skillCatalog(spec.skills);
+  if (!spec.output) return withSkills;
+  return `${withSkills}\n\nWhen you finish a turn, reply with ONLY a JSON object of this shape and nothing else:\n${spec.output}`;
 }
 
 // A sub-agent session: built once from its spec, then run one turn at a time. The checkpointer keeps the
@@ -44,14 +48,20 @@ export class Agent {
     {
       sessionId,
       checkpointer,
+      principal,
       onToolResult,
+      guard,
+      facts,
       tools,
       middleware,
       resolveInterrupt,
     }: {
       sessionId: string;
       checkpointer: BaseCheckpointSaver;
+      principal: Principal;
       onToolResult?: ToolResultHandler;
+      guard?: ToolGuard;
+      facts?: () => string; // appended to the system prompt on every model call
       tools?: unknown[];
       middleware?: AnyAgentMiddleware[];
       resolveInterrupt?: (request: HITLRequest) => Promise<HITLResponse>;
@@ -59,14 +69,21 @@ export class Agent {
   ) {
     this.sessionId = sessionId;
     this.resolveInterrupt = resolveInterrupt;
+    const baseTools = tools ?? mcp.langchainTools(spec.tools, pyTitle(spec.name.replaceAll("_", " ")), onToolResult, guard);
     this.graph = createAgent({
       model: getChatModel({ temperature: spec.temperature, label: spec.name }),
       // The Main Agent passes its own non-MCP tools (ask_user, launch_subagent, ...) explicitly here;
       // every sub-agent still derives its tools from `spec.tools` against the MCP server as before.
-      tools: (tools ?? mcp.langchainTools(spec.tools, pyTitle(spec.name.replaceAll("_", " ")), onToolResult)) as never,
+      // load_skill is concatenated onto either source, scoped to exactly the skills spec.skills names —
+      // never a global namespace an agent could reach beyond its own declared skills.
+      tools: [...baseTools, ...(spec.skills.length ? [createLoadSkillTool(spec.skills)] : [])] as never,
       systemPrompt: systemPrompt(spec),
       checkpointer,
-      middleware: middleware as never,
+      middleware: [
+        ...(middleware ?? []),
+        ...(facts ? [dynamicSystemPromptMiddleware(facts)] : []),
+        createRbacMiddleware(principal),
+      ] as never,
     });
   }
 

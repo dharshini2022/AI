@@ -1,7 +1,8 @@
 import { createInterface } from "node:readline/promises";
 import type { HITLRequest, HITLResponse } from "langchain";
+import { z } from "zod";
 import type { StdinChannel } from "./stdin.ts";
-import { type BudgetRecheck, renderCards } from "./tools/index.ts";
+import { type BookingDetails, type BudgetRecheck, renderCards } from "./tools/index.ts";
 import type { Dict } from "./tools/util.ts";
 
 const YES = new Set(["y", "yes", "ok", "sure", "yeah"]);
@@ -26,11 +27,15 @@ export function formatWeatherBox(weather?: Dict, reason?: string): string {
   return lines.join("\n");
 }
 
-export function formatBookingBox(details: Dict): string {
-  const lines = [`\nAuthorize and execute flight ticket booking?\n`, `┌ Flight Booking Authorization ────────────────────────────────────`];
+export function formatBookingBox(details: BookingDetails): string {
+  const lines = [`\nAuthorize and execute transportation booking?\n`, `┌ Transportation Booking Authorization ────────────────────────────`];
   if (details.destination) lines.push(`│ Destination : ${details.destination}`);
-  if (details.transport_option) lines.push(`│ Option      : ${details.transport_option}`);
-  if (details.fare) lines.push(`│ Approx Fare : ${details.fare}`);
+  const [only, ...rest] = details.legs;
+  if (only && !rest.length) {
+    lines.push(`│ Option      : ${only.option}`, `│ Approx Fare : ${only.fare}`);
+  } else {
+    for (const leg of details.legs) lines.push(`│ ${leg.label.padEnd(11)} : ${leg.option} — ${leg.fare}`);
+  }
   lines.push(`└───────────────────────────────────────────────────────────────────`);
   return lines.join("\n");
 }
@@ -93,6 +98,19 @@ export class Hitl {
       const raw = await this.input(`\n${question} (yes/no)\n> `);
       return { answer: YES.has(raw.trim().toLowerCase()) };
     });
+  }
+
+  // Asks for an email address. Enter skips (null). An address that is not valid is asked again, up to 3 times.
+  async askEmail(prompt: string): Promise<string | null> {
+    let question = prompt;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { answer } = await this.askUser(question);
+      const address = answer.trim();
+      if (!address) return null;
+      if (z.email().safeParse(address).success) return address;
+      question = `"${address}" is not a valid email address. Try again (press Enter to skip):`;
+    }
+    return null;
   }
 
   handleTransportChoice(prompt: string, options: string[]) {

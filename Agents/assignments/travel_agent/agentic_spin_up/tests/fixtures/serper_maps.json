@@ -1,0 +1,176 @@
+{
+  "searchParameters": {
+    "q": "top tourist attractions in Munnar",
+    "gl": "in",
+    "hl": "en",
+    "type": "maps",
+    "num": 10,
+    "page": 1,
+    "ll": "@10.0889,77.0595,12z",
+    "engine": "google"
+  },
+  "ll": "@10.0888119,77.0594955,12z",
+  "places": [
+    {
+      "position": 1,
+      "title": "The Blossom Hydel Park",
+      "address": "Bus Stand, Highway, Munnar - Aluva Rd, near KSRTC, Moolakadai, Munnar, Keralam 685612, India",
+      "latitude": 10.069717299999999,
+      "longitude": 77.06645019999999,
+      "rating": 4,
+      "ratingCount": 10136,
+      "type": "Park",
+      "types": [
+        "Park"
+      ],
+      "website": "http://www.keralahydeltourism.com/",
+      "phoneNumber": "+91 4865 296 550",
+      "description": "Lush, expansive park known for its nature trails, bird-watching & scenic lookout points.",
+      "openingHours": {
+        "Monday": "9 AM–7:30 PM",
+        "Tuesday": "9 AM–7:30 PM",
+        "Wednesday": "9 AM–7:30 PM",
+        "Thursday": "9 AM–7:30 PM",
+        "Friday": "9 AM–7:30 PM",
+        "Saturday": "9 AM–7:30 PM",
+        "Sunday": "9 AM–7:30 PM"
+      },
+      "thumbnailUrl": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWn5O7d-XOAmQnTnnlgJ1Z0WKO2Lhwg7FS7riEkDQqbscnzOgRQQl1HM70TnZ1aTkiUhfHLpXw2-fLPC8nDvzyia14XaUFdzntkrZr05tN5z7n0y4xGhTBhB8EVQ5QPMlKnDoPk",
+      "cid": "6504000002898411358",
+      "fid": "0x3b07990d379ba27f:0x5a42d98affe63f5e",
+      "placeId": "ChIJf6KbNw2ZBzsRXj_m_4rZQlo"
+    },
+    {
+      "position": 2,
+      "title": "Tea Museum",
+      "address": "KDHP House, NH 49, Nullatanni, Munnar, Kannan Devan Hills, Keralam 685612, India",
+      "latitude": 10.0941757,
+      "longitude": 77.05072,
+      "rating": 3.8,
+      "ratingCount": 16698,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction",
+        "Museum"
+      ],
+      "website": "http://kdhptea.com/",
+      "phoneNumber": "+91 4868 255 000",
+      "description": "Museum tracing the history & production of tea with old machinery, photographs & demonstrations.",
+      "openingHours": {
+        "Monday": "9 AM–5 PM",
+        "Tuesday": "9 AM–5 PM",
+        "Wednesday": "9 AM–5 PM",
+        "Thursday": "9 AM–5 PM",
+        "Friday": "9 AM–5 PM",
+        "Saturday": "9 AM–5 PM",
+        "Sunday": "9 AM–5 PM"
+      },
+      "thumbnailUrl": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkjhrI8WgSEuo8KeX2q3nZaIJ4vrsqfbNXh3n-B_oZQhZvg7xoe5xeJYpOhMWxkYkXoYrSkAMNQPdGds-lUIa8d-D8jL2tU-oNYqJe5tFe60r63IWHU0yQ2QZy5j02Rq_tv03xykA",
+      "cid": "15303620340445659665",
+      "fid": "0x3b079a29880171f9:0xd461619e19b4c211",
+      "placeId": "ChIJ-XEBiCmaBzsREcK0GZ5hYdQ"
+    },
+    {
+      "position": 3,
+      "title": "Munnar views",
+      "address": "33Q5+HRC, Munnar - Udumalpet Rd, Nullatanni, Munnar, Keralam 685612, India",
+      "latitude": 10.0889378,
+      "longitude": 77.0595163,
+      "rating": 4.6,
+      "ratingCount": 121,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction"
+      ],
+      "phoneNumber": "+91 1800 425 4747",
+      "openingHours": {
+        "Monday": "Open 24 hours",
+        "Tuesday": "Open 24 hours",
+        "Wednesday": "Open 24 hours",
+        "Thursday": "Open 24 hours",
+        "Friday": "Open 24 hours",
+        "Saturday": "Open 24 hours",
+        "Sunday": "Open 24 hours"
+      },
+      "thumbnailUrl": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWm-PftepG8hvc_pWsMPCqIahq-wmj0ZcPRBv-HBERsisa5cWgCySTxH_VXa5JZiP217ttzsrBg86TKankgwAAIsRKYz63EQ7MJoJ2bLo91BCigQEyAPjp5lvS6ilFbMhFv1tbC1bw",
+      "cid": "8169355494320082124",
+      "fid": "0x3b07998603951e71:0x715f6189fad58ccc",
+      "placeId": "ChIJcR6VA4aZBzsRzIzV-olhX3E"
+    },
+    {
+      "position": 4,
+      "title": "Attukad Waterfalls",
+      "address": "3335+9GH, Attukad Waterfall Rd, Pallivasal, Keralam 685612, India",
+      "latitude": 10.053440799999999,
+      "longitude": 77.0588501,
+      "rating": 4.2,
+      "ratingCount": 5952,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction"
+      ],
+      "description": "Multiple waterfalls cascading amid rolling hills, surrounded by hiking trails & panoramic views.",
+      "openingHours": {
+        "Monday": "Open 24 hours",
+        "Tuesday": "Open 24 hours",
+        "Wednesday": "Open 24 hours",
+        "Thursday": "Open 24 hours",
+        "Friday": "Open 24 hours",
+        "Saturday": "Open 24 hours",
+        "Sunday": "Open 24 hours"
+      },
+      "thumbnailUrl": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWnGu_I9Rtu56TivkrUVLpUN3axZ-U0tOTFzM1gj9Gsd9rm5NyfK-pR8XZW6Dls6FSckViWbo7_LTYEbd6Xa5lTfgbpCwayjXHge_Zw-Txe7onUl1EQbs6WNGGWdW8eIdHPJqBiZ",
+      "cid": "1578527597596709082",
+      "fid": "0x3b0799072e70314d:0x15e80e7c92e710da",
+      "placeId": "ChIJTTFwLgeZBzsR2hDnknwO6BU"
+    },
+    {
+      "position": 5,
+      "title": "Kolukkumalai Tea Estate",
+      "address": "33Q5+HRC, Kolukkumalai, Suryanelli, Munnar, Keralam 685612, India",
+      "latitude": 10.0889332,
+      "longitude": 77.0595247,
+      "rating": 4.5,
+      "ratingCount": 2905,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction"
+      ],
+      "phoneNumber": "+91 97867 86503",
+      "description": "Tea tastings, jeep tours & birdwatching at a lush plantation surrounded by steep, forested peaks.",
+      "thumbnailUrl": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkET6dnzQ6Pdn3UGsGWCg9cqo9eCIg79hbRQpCbJ34YEty3rTQ7D9ypXvdvlipxH6xOUAiqpbsO6exo2bQhi1kwcYFXewJNmaK8RT-sKYcCMut2CVY1-AsYkc0prcU10wYmUk6Lyg",
+      "cid": "5314835618563833938",
+      "fid": "0x3b07991595475f2f:0x49c216d5fc174052",
+      "placeId": "ChIJL19HlRWZBzsRUkAX_NUWwkk"
+    },
+    {
+      "position": 6,
+      "title": "Munnar Rose Garden",
+      "address": "Munnar - Aluva Rd, Rose Nagar, Mattupetty, Munnar, Keralam 685612, India",
+      "latitude": 10.0860013,
+      "longitude": 77.0755241,
+      "rating": 4.3,
+      "ratingCount": 10617,
+      "type": "Tourist attraction",
+      "types": [
+        "Tourist attraction",
+        "Garden"
+      ],
+      "phoneNumber": "+91 94968 22059",
+      "openingHours": {
+        "Monday": "8 AM–6 PM",
+        "Tuesday": "8 AM–6 PM",
+        "Wednesday": "8 AM–6 PM",
+        "Thursday": "8 AM–6 PM",
+        "Friday": "8 AM–6 PM",
+        "Saturday": "8 AM–6 PM",
+        "Sunday": "8 AM–6 PM"
+      },
+      "thumbnailUrl": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmVHglSRM4uWEt23Eylekn15QuB6R0lc_SVqKCNcSdP4TH3UsnJoljEKJpPCJ1TwYh-FH-kk1Klnrn1jRErESWk3Mj-VbEJ0UIrGsMJsQ4YjkXi5QF1iZ-yxJmJVkf4KLRwEDiN",
+      "cid": "3237965624640609251",
+      "fid": "0x3b079966e97e7fab:0x2cef909483a11be3",
+      "placeId": "ChIJq39-6WaZBzsR4xuhg5SQ7yw"
+    }
+  ],
+  "credits": 3
+}

@@ -1,4 +1,7 @@
 .env
 node_modules/
-changes_made.md
-tests/
+concepts/meta/changes-made.md
+.cache/
+checklist
+TODO.md
+BACKLOG.md

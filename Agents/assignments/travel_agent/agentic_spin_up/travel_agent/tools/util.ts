@@ -1,4 +1,14 @@
+import { readFileSync } from "node:fs";
+import type { z } from "zod";
+
 export type Dict = Record<string, any>;
+
+// Reads a JSON data file and checks its shape, so a typo in an edited file fails loudly with its path.
+export function readJsonFile<T>(path: string, schema: z.ZodType<T>): T {
+  const parsed = schema.safeParse(JSON.parse(readFileSync(path, "utf8")));
+  if (!parsed.success) throw new Error(`${path} is not valid: ${parsed.error.message}`);
+  return parsed.data;
+}
 
 export function isDict(v: unknown): v is Dict {
   return v !== null && typeof v === "object" && !Array.isArray(v);

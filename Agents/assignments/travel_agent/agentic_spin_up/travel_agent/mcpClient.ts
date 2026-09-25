@@ -8,7 +8,7 @@ import { tool } from "langchain";
 import { PKG_ROOT, ROOT, settings } from "./config.ts";
 import { type Limiter, createLimiter } from "./limiter.ts";
 import { startTimer } from "./timing.ts";
-import type { Dict } from "./tools/util.ts";
+import { type Dict, isDict } from "./tools/util.ts";
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   transport_search: "[transport] Searching transport options (flight / train / bus)",
@@ -20,7 +20,17 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
   budget_check: "[budget] Calculating trip budget & expenses",
 };
 
-export type ToolResultHandler = (tool: string, result: unknown) => void;
+export type ToolResultHandler = (tool: string, result: unknown, input: Dict) => void;
+// Runs before an LLM-issued call: the arguments to actually send, and a notice for the model if any were replaced.
+export type ToolGuard = (tool: string, input: Dict) => { input: Dict; notice?: string };
+
+// The server flags an empty result caused by an outage with `search_problem`. The model is told; the recorded
+// result stays as the tool produced it, so consumers such as the itinerary builder never see the extra key.
+function splitSearchProblem(result: unknown): [unknown, string | undefined] {
+  if (!isDict(result) || !("search_problem" in result)) return [result, undefined];
+  const { search_problem, ...rest } = result;
+  return [rest, String(search_problem)];
+}
 
 function defaultCommand(): string[] {
   if (settings.mcpServerCmd) {
@@ -94,18 +104,20 @@ export class McpTools {
     });
   }
 
-  // `onResult` receives every raw tool result, so sub-agents never have to repeat data in their replies.
-  langchainTools(names: string[] | null = null, agentLabel = "", onResult?: ToolResultHandler) {
+  // `onResult` receives every raw tool result (with the arguments actually sent), so sub-agents never have to
+  // repeat data in their replies. `guard` can correct the arguments before the call goes out.
+  langchainTools(names: string[] | null = null, agentLabel = "", onResult?: ToolResultHandler, guard?: ToolGuard) {
     return this.tools
       .filter((t) => names === null || names.includes(t.name))
       .map((t) =>
         tool(
-          async (input: Dict) => {
+          async (raw: Dict) => {
+            const { input, notice } = guard ? guard(t.name, raw) : { input: raw, notice: undefined };
             const prefix = agentLabel ? `  [${agentLabel}] ` : "  ";
             console.log(`${prefix}${TOOL_DESCRIPTIONS[t.name] ?? `Calling ${t.name}`} using ${t.name} tool...`);
-            const result = await this.call(t.name, input);
-            onResult?.(t.name, result);
-            return result;
+            const [recorded, problem] = splitSearchProblem(await this.call(t.name, input));
+            onResult?.(t.name, recorded, input);
+            return notice || problem ? { ...(recorded as Dict), guard_notice: notice, search_problem: problem } : recorded;
           },
           { name: t.name, description: t.description, schema: t.schema },
         ),

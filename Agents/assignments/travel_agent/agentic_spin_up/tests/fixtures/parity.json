@@ -1,0 +1,2760 @@
+{
+ "budget": [
+  {
+   "args": [
+    5000,
+    3200,
+    3,
+    2,
+    460,
+    40000,
+    1900
+   ],
+   "out": {
+    "ok": true,
+    "total": 14220,
+    "cap": 40000,
+    "overage": 0,
+    "breakdown": {
+     "transport": 5000,
+     "lodging": 6400,
+     "food": 1900,
+     "activities": 920
+    }
+   }
+  },
+  {
+   "args": [
+    5000,
+    3200,
+    1,
+    1,
+    0,
+    null,
+    null
+   ],
+   "out": {
+    "ok": true,
+    "total": 8200,
+    "cap": null,
+    "overage": 0,
+    "breakdown": {
+     "transport": 5000,
+     "lodging": 3200,
+     "food": 0,
+     "activities": 0
+    }
+   }
+  },
+  {
+   "args": [
+    12000.555,
+    4000,
+    4,
+    3,
+    125.125,
+    10000,
+    -5
+   ],
+   "out": {
+    "ok": false,
+    "total": 24375.93,
+    "cap": 10000,
+    "overage": 14375.93,
+    "breakdown": {
+     "transport": 12000.56,
+     "lodging": 12000,
+     "food": 0,
+     "activities": 375.38
+    }
+   }
+  },
+  {
+   "args": [
+    1234.5,
+    0,
+    2,
+    1,
+    0,
+    1000,
+    null
+   ],
+   "out": {
+    "ok": false,
+    "total": 1234.5,
+    "cap": 1000,
+    "overage": 234.5,
+    "breakdown": {
+     "transport": 1234.5,
+     "lodging": 0,
+     "food": 0,
+     "activities": 0
+    }
+   }
+  }
+ ],
+ "haversine": [
+  {
+   "args": [
+    [
+     10,
+     77
+    ],
+    [
+     12.97,
+     77.59
+    ]
+   ],
+   "out": 336.4471699705072
+  },
+  {
+   "args": [
+    [
+     10.0889,
+     77.0595
+    ],
+    [
+     15.2993,
+     74.124
+    ]
+   ],
+   "out": 661.0509947389216
+  }
+ ],
+ "helpers": {
+  "cost_from_price_level": [
+   {
+    "args": [
+     null,
+     100
+    ],
+    "out": 100
+   },
+   {
+    "args": [
+     "",
+     100
+    ],
+    "out": 100
+   },
+   {
+    "args": [
+     "$$",
+     100
+    ],
+    "out": 450
+   },
+   {
+    "args": [
+     "Moderate",
+     100
+    ],
+    "out": 450
+   },
+   {
+    "args": [
+     "₹600–1,800 for two",
+     350
+    ],
+    "out": 600
+   },
+   {
+    "args": [
+     "Rs.400 - 1,600",
+     350
+    ],
+    "out": 1000
+   },
+   {
+    "args": [
+     "$31",
+     350
+    ],
+    "out": 2557.5
+   },
+   {
+    "args": [
+     "US$23-31",
+     350
+    ],
+    "out": 2227.5
+   },
+   {
+    "args": [
+     "$$$$$",
+     100
+    ],
+    "out": 2500
+   },
+   {
+    "args": [
+     "free entry",
+     100
+    ],
+    "out": 100
+   },
+   {
+    "args": [
+     " $$ ",
+     100
+    ],
+    "out": 450
+   },
+   {
+    "args": [
+     "1 1 1 2 for two",
+     0
+    ],
+    "out": 0.62
+   },
+   {
+    "args": [
+     "$1",
+     0
+    ],
+    "out": 82.5
+   },
+   {
+    "args": [
+     "$3 for 2",
+     0
+    ],
+    "out": 123.75
+   }
+  ],
+  "norm_price_level": [
+   {
+    "args": [
+     null
+    ],
+    "out": null
+   },
+   {
+    "args": [
+     "$$"
+    ],
+    "out": "$$"
+   },
+   {
+    "args": [
+     "Very Expensive"
+    ],
+    "out": "Very Expensive"
+   },
+   {
+    "args": [
+     "₹600–1,800 for two"
+    ],
+    "out": "₹600–1800 for two"
+   },
+   {
+    "args": [
+     "$1"
+    ],
+    "out": "₹82"
+   },
+   {
+    "args": [
+     "$3"
+    ],
+    "out": "₹248"
+   },
+   {
+    "args": [
+     "US$23-31"
+    ],
+    "out": "₹1898–2558"
+   },
+   {
+    "args": [
+     "no price"
+    ],
+    "out": null
+   },
+   {
+    "args": [
+     "Rs.  400  -  1,600"
+    ],
+    "out": "₹400–1600"
+   },
+   {
+    "args": [
+     "$$ "
+    ],
+    "out": "$$"
+   }
+  ],
+  "clean_name": [
+   {
+    "args": [
+     "Top 10 Beaches | Blog"
+    ],
+    "out": "10 Beaches"
+   },
+   {
+    "args": [
+     "Best  Cafe - Munnar"
+    ],
+    "out": "Cafe"
+   },
+   {
+    "args": [
+     "1. Tea Museum"
+    ],
+    "out": "Tea Museum"
+   },
+   {
+    "args": [
+     "   "
+    ],
+    "out": "Place"
+   },
+   {
+    "args": [
+     "Top"
+    ],
+    "out": "Top"
+   },
+   {
+    "args": [
+     "Photo Point"
+    ],
+    "out": "Photo Point"
+   }
+  ],
+  "maps_url": [
+   {
+    "args": [],
+    "kwargs": {
+     "name": "Tea Museum",
+     "city": "Munnar"
+    },
+    "out": "https://www.google.com/maps/search/?api=1&query=Tea%20Museum%2C%20Munnar"
+   },
+   {
+    "args": [],
+    "kwargs": {
+     "name": "Café & Bar (Old)",
+     "city": "Munnar",
+     "address": "KDHP/Road 5"
+    },
+    "out": "https://www.google.com/maps/search/?api=1&query=Caf%C3%A9%20%26%20Bar%20%28Old%29%2C%20KDHP/Road%205"
+   },
+   {
+    "args": [],
+    "kwargs": {
+     "name": "X",
+     "city": "Y",
+     "cid": "123"
+    },
+    "out": "https://www.google.com/maps?cid=123"
+   },
+   {
+    "args": [],
+    "kwargs": {
+     "name": "X",
+     "city": "Y",
+     "lat": 10,
+     "lon": 77.25
+    },
+    "out": "https://www.google.com/maps/search/?api=1&query=X%2C%20Y&center=10.0,77.25"
+   }
+  ],
+  "hours_str": [
+   {
+    "args": [
+     null
+    ],
+    "out": null
+   },
+   {
+    "args": [
+     "  9 AM  –  5 PM "
+    ],
+    "out": "9 AM – 5 PM"
+   },
+   {
+    "args": [
+     {
+      "mon": "9–5",
+      "tue": "9–5"
+     }
+    ],
+    "out": "9–5"
+   },
+   {
+    "args": [
+     {
+      "monday": "9–5",
+      "tuesday": "Closed"
+     }
+    ],
+    "out": "mon 9–5; tue Closed"
+   }
+  ],
+  "extract_price_and_url": [
+   {
+    "args": [
+     {
+      "price": "$$",
+      "pricing": {
+       "offers": [
+        {
+         "price": "₹10"
+        }
+       ]
+      }
+     }
+    ],
+    "out": [
+     "$$",
+     null
+    ]
+   },
+   {
+    "args": [
+     {
+      "price_level": "₹200",
+      "knowledge_graph": {
+       "pricing": {
+        "offers": {
+         "Agoda": "$5",
+         "MMT": {
+          "rate": "₹300",
+          "url": "https://mmt.example"
+         }
+        }
+       }
+      }
+     }
+    ],
+    "out": [
+     "₹300",
+     "https://mmt.example"
+    ]
+   },
+   {
+    "args": [
+     {
+      "prices": [
+       {
+        "rate_per_night": {
+         "lowest": "₹1,200"
+        },
+        "booking_link": "https://b.example"
+       },
+       "₹900"
+      ]
+     }
+    ],
+    "out": [
+     "₹900",
+     null
+    ]
+   },
+   {
+    "args": [
+     {
+      "priceRange": "₹100-200"
+     }
+    ],
+    "out": [
+     "₹100-200",
+     null
+    ]
+   },
+   {
+    "args": [
+     {}
+    ],
+    "out": [
+     null,
+     null
+    ]
+   },
+   {
+    "args": [
+     {
+      "pricing": {
+       "offers": [
+        {
+         "price": "call"
+        },
+        {
+         "link": "x"
+        }
+       ]
+      }
+     }
+    ],
+    "out": [
+     null,
+     null
+    ]
+   }
+  ],
+  "slugify": [
+   {
+    "args": [
+     "New Delhi"
+    ],
+    "out": "new-delhi"
+   },
+   {
+    "args": [
+     "Tiruchirappalli!"
+    ],
+    "out": "tiruchirappalli"
+   },
+   {
+    "args": [
+     "  São_Paulo -- City "
+    ],
+    "out": "são-paulo-city"
+   }
+  ],
+  "title": [
+   {
+    "args": [
+     "new delhi"
+    ],
+    "out": "New Delhi"
+   },
+   {
+    "args": [
+     "o'hare 3rd"
+    ],
+    "out": "O'Hare 3Rd"
+   },
+   {
+    "args": [
+     "MUNNAR hills"
+    ],
+    "out": "Munnar Hills"
+   }
+  ],
+  "add_days": [
+   {
+    "args": [
+     "2026-12-31",
+     1
+    ],
+    "out": "2027-01-01"
+   },
+   {
+    "args": [
+     "2026-02-30",
+     1
+    ],
+    "out": null
+   },
+   {
+    "args": [
+     null,
+     1
+    ],
+    "out": null
+   },
+   {
+    "args": [
+     "2026-1-5",
+     3
+    ],
+    "out": "2026-01-08"
+   }
+  ],
+  "shift_year": [
+   {
+    "args": [
+     "2028-02-29"
+    ],
+    "out": "2027-02-28"
+   },
+   {
+    "args": [
+     "2026-10-02"
+    ],
+    "out": "2025-10-02"
+   }
+  ]
+ },
+ "search_places": [
+  {
+   "args": [
+    "Munnar",
+    [
+     "tea",
+     "waterfalls"
+    ],
+    false
+   ],
+   "out": [
+    {
+     "name": "Eravikulam National Park",
+     "category": "National park",
+     "types": [
+      "National park"
+     ],
+     "address": "Munnar",
+     "rating": 4.5,
+     "rating_count": 20500,
+     "hours": "Open ⋅ Closes 4 PM",
+     "phone": null,
+     "website": null,
+     "lat": 10.1929,
+     "lon": 77.0877,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Eravikulam%20National%20Park%2C%20Munnar&center=10.1929,77.0877",
+     "indoor": false,
+     "price_level": "₹200",
+     "est_cost": 200
+    },
+    {
+     "name": "Station Viewpoint",
+     "category": "Tourist attraction",
+     "types": [
+      "Tourist attraction",
+      "Scenic spot"
+     ],
+     "address": "Top Station, Kerala",
+     "rating": 4.6,
+     "rating_count": 12850,
+     "hours": "6 AM–6 PM",
+     "phone": null,
+     "website": null,
+     "lat": 10.1256,
+     "lon": 77.2436,
+     "maps_url": "https://www.google.com/maps?cid=1111",
+     "indoor": false,
+     "price_level": null,
+     "est_cost": 30
+    },
+    {
+     "name": "Mattupetty Dam",
+     "category": "Dam",
+     "types": [],
+     "address": "Mattupetty, Munnar",
+     "rating": 4.3,
+     "rating_count": 9800,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": 10.1063,
+     "lon": 77.1238,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Mattupetty%20Dam%2C%20Mattupetty%2C%20Munnar&center=10.1063,77.1238",
+     "indoor": false,
+     "price_level": "₹20",
+     "est_cost": 20
+    },
+    {
+     "name": "5. Tea Museum",
+     "category": "Museum",
+     "types": [],
+     "address": "KDHP, Munnar",
+     "rating": 4.2,
+     "rating_count": 5400,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": 10.0953,
+     "lon": 77.059,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=5.%20Tea%20Museum%2C%20KDHP%2C%20Munnar&center=10.0953,77.059",
+     "indoor": false,
+     "price_level": "$$",
+     "est_cost": 450
+    },
+    {
+     "name": "Tea Museum",
+     "category": "Museum",
+     "types": [
+      "Museum"
+     ],
+     "address": "KDHP",
+     "rating": 4.2,
+     "rating_count": 5400,
+     "hours": "mon 9 AM–5 PM; tue 9 AM–5 PM; wed Closed",
+     "phone": null,
+     "website": null,
+     "lat": 10.0953,
+     "lon": 77.059,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Tea%20Museum%2C%20KDHP&center=10.0953,77.059",
+     "indoor": false,
+     "price_level": null,
+     "est_cost": 200
+    },
+    {
+     "name": "Photo Point",
+     "category": "Scenic spot",
+     "types": [],
+     "address": "Munnar",
+     "rating": 4.1,
+     "rating_count": 2300,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": 10.0762,
+     "lon": 77.0802,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Photo%20Point%2C%20Munnar&center=10.0762,77.0802",
+     "indoor": false,
+     "price_level": "₹165–330",
+     "est_cost": 247.5
+    },
+    {
+     "name": "Lockhart Gap Viewpoint",
+     "category": "Viewpoint",
+     "types": [],
+     "address": "Munnar",
+     "rating": 4.7,
+     "rating_count": 800,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": 10.04,
+     "lon": 77.13,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Lockhart%20Gap%20Viewpoint%2C%20Munnar&center=10.04,77.13",
+     "indoor": false,
+     "price_level": null,
+     "est_cost": 30
+    },
+    {
+     "name": "Munnar Art Gallery",
+     "category": "Art gallery",
+     "types": [],
+     "address": "Munnar",
+     "rating": 3.9,
+     "rating_count": 150,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": 10.087,
+     "lon": 77.061,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Art%20Gallery%2C%20Munnar&center=10.087,77.061",
+     "indoor": false,
+     "price_level": "moderate",
+     "est_cost": 450
+    },
+    {
+     "name": "Hidden Waterfall",
+     "category": "Waterfall",
+     "types": [],
+     "address": "Munnar",
+     "rating": 4.8,
+     "rating_count": 12,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": null,
+     "lon": null,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Hidden%20Waterfall%2C%20Munnar",
+     "indoor": false,
+     "price_level": "$",
+     "est_cost": 150
+    }
+   ]
+  },
+  {
+   "args": [
+    "Munnar",
+    [],
+    true
+   ],
+   "out": [
+    {
+     "name": "Tea Museum",
+     "category": "Museum",
+     "types": [
+      "Museum"
+     ],
+     "address": "KDHP",
+     "rating": 4.2,
+     "rating_count": 5400,
+     "hours": "mon 9 AM–5 PM; tue 9 AM–5 PM; wed Closed",
+     "phone": null,
+     "website": null,
+     "lat": 10.0953,
+     "lon": 77.059,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Tea%20Museum%2C%20KDHP&center=10.0953,77.059",
+     "indoor": true,
+     "price_level": null,
+     "est_cost": 200
+    },
+    {
+     "name": "Lockhart Gap Viewpoint",
+     "category": "Viewpoint",
+     "types": [],
+     "address": "Munnar",
+     "rating": 4.7,
+     "rating_count": 800,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": 10.04,
+     "lon": 77.13,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Lockhart%20Gap%20Viewpoint%2C%20Munnar&center=10.04,77.13",
+     "indoor": true,
+     "price_level": null,
+     "est_cost": 30
+    },
+    {
+     "name": "Munnar Art Gallery",
+     "category": "Art gallery",
+     "types": [],
+     "address": "Munnar",
+     "rating": 3.9,
+     "rating_count": 150,
+     "hours": null,
+     "phone": null,
+     "website": null,
+     "lat": 10.087,
+     "lon": 77.061,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Art%20Gallery%2C%20Munnar&center=10.087,77.061",
+     "indoor": true,
+     "price_level": "moderate",
+     "est_cost": 450
+    }
+   ]
+  }
+ ],
+ "search_restaurants": [
+  {
+   "args": [
+    "Munnar",
+    [
+     "Veg food"
+    ]
+   ],
+   "out": {
+    "Breakfast": [
+     {
+      "name": "Saravana Bhavan",
+      "category": "South Indian restaurant",
+      "types": [],
+      "address": "Main Bazaar",
+      "rating": 4.1,
+      "rating_count": 2100,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.089,
+      "lon": 77.06,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%2C%20Main%20Bazaar&center=10.089,77.06",
+      "indoor": true,
+      "price_level": "₹100–200",
+      "est_cost": 150
+     },
+     {
+      "name": "Rapsy Restaurant",
+      "category": "breakfast spot",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.3,
+      "rating_count": 3400,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0885,
+      "lon": 77.0612,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Rapsy%20Restaurant%2C%20Munnar&center=10.0885,77.0612",
+      "indoor": true,
+      "price_level": "$",
+      "est_cost": 150
+     }
+    ],
+    "Lunch": [
+     {
+      "name": "Hotel Sree Krishna",
+      "category": "Vegetarian restaurant",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.2,
+      "rating_count": 900,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0871,
+      "lon": 77.0588,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588",
+      "indoor": true,
+      "price_level": "₹600–1800 for two",
+      "est_cost": 600
+     }
+    ],
+    "Dinner": [
+     {
+      "name": "Guru's Restaurant",
+      "category": "dinner spot",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.4,
+      "rating_count": 1500,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0902,
+      "lon": 77.0601,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Guru%27s%20Restaurant%2C%20Munnar&center=10.0902,77.0601",
+      "indoor": true,
+      "price_level": "₹1898–2558",
+      "est_cost": 2227.5
+     },
+     {
+      "name": "Taste of Munnar",
+      "category": "dinner spot",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.1,
+      "rating_count": 300,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": null,
+      "lon": null,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Taste%20of%20Munnar%2C%20Munnar",
+      "indoor": true,
+      "price_level": null,
+      "est_cost": 450
+     }
+    ]
+   }
+  },
+  {
+   "args": [
+    "Munnar",
+    []
+   ],
+   "out": {
+    "Breakfast": [
+     {
+      "name": "Saravana Bhavan",
+      "category": "South Indian restaurant",
+      "types": [],
+      "address": "Main Bazaar",
+      "rating": 4.1,
+      "rating_count": 2100,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.089,
+      "lon": 77.06,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%2C%20Main%20Bazaar&center=10.089,77.06",
+      "indoor": true,
+      "price_level": "₹100–200",
+      "est_cost": 150
+     },
+     {
+      "name": "Rapsy Restaurant",
+      "category": "breakfast spot",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.3,
+      "rating_count": 3400,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0885,
+      "lon": 77.0612,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Rapsy%20Restaurant%2C%20Munnar&center=10.0885,77.0612",
+      "indoor": true,
+      "price_level": "$",
+      "est_cost": 150
+     }
+    ],
+    "Lunch": [
+     {
+      "name": "Hotel Sree Krishna",
+      "category": "Vegetarian restaurant",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.2,
+      "rating_count": 900,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0871,
+      "lon": 77.0588,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588",
+      "indoor": true,
+      "price_level": "₹600–1800 for two",
+      "est_cost": 600
+     }
+    ],
+    "Dinner": [
+     {
+      "name": "Guru's Restaurant",
+      "category": "dinner spot",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.4,
+      "rating_count": 1500,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0902,
+      "lon": 77.0601,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Guru%27s%20Restaurant%2C%20Munnar&center=10.0902,77.0601",
+      "indoor": true,
+      "price_level": "₹1898–2558",
+      "est_cost": 2227.5
+     },
+     {
+      "name": "Taste of Munnar",
+      "category": "dinner spot",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.1,
+      "rating_count": 300,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": null,
+      "lon": null,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Taste%20of%20Munnar%2C%20Munnar",
+      "indoor": true,
+      "price_level": null,
+      "est_cost": 450
+     }
+    ]
+   }
+  }
+ ],
+ "search_accommodation": [
+  {
+   "args": [
+    "Munnar",
+    2,
+    "2026-10-02",
+    2
+   ],
+   "out": [
+    {
+     "name": "Munnar Tea Hills Resort",
+     "price_per_night": 5200,
+     "rating": 4.4,
+     "address": "Munnar",
+     "lat": 10.085,
+     "lon": 77.065,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Tea%20Hills%20Resort%2C%20Munnar&center=10.085,77.065",
+     "booking_url": "https://hotels.example/teahills",
+     "url": "https://hotels.example/teahills"
+    },
+    {
+     "name": "Budget Inn",
+     "price_per_night": 3400,
+     "rating": 3.9,
+     "address": "Munnar",
+     "lat": 10.092,
+     "lon": 77.058,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Budget%20Inn%2C%20Munnar&center=10.092,77.058",
+     "booking_url": null,
+     "url": null
+    }
+   ]
+  },
+  {
+   "args": [
+    "Munnar",
+    2,
+    null,
+    null
+   ],
+   "out": [
+    {
+     "name": "Tea Valley Resort",
+     "price_per_night": 3900,
+     "rating": 4.3,
+     "address": "Munnar",
+     "lat": 10.07,
+     "lon": 77.05,
+     "maps_url": "https://www.google.com/maps?cid=9999",
+     "booking_url": "https://goibibo.example/tv",
+     "url": "https://goibibo.example/tv"
+    },
+    {
+     "name": "Blanket Hotel",
+     "price_per_night": 3500,
+     "rating": 4.5,
+     "address": "Munnar",
+     "lat": 10.081,
+     "lon": 77.071,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Blanket%20Hotel%2C%20Munnar&center=10.081,77.071",
+     "booking_url": "https://example.com/blanket",
+     "url": "https://example.com/blanket"
+    },
+    {
+     "name": "Misty Mountain Resort",
+     "price_per_night": 2800,
+     "rating": 4.2,
+     "address": "Munnar",
+     "lat": 10.095,
+     "lon": 77.045,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Misty%20Mountain%20Resort%2C%20Munnar&center=10.095,77.045",
+     "booking_url": "https://agoda.example/misty",
+     "url": "https://agoda.example/misty"
+    },
+    {
+     "name": "No Price Homestay",
+     "price_per_night": 7500,
+     "rating": 3.8,
+     "address": "Munnar",
+     "lat": 10.1,
+     "lon": 77.07,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=No%20Price%20Homestay%2C%20Munnar&center=10.1,77.07",
+     "booking_url": null,
+     "url": null
+    }
+   ]
+  },
+  {
+   "args": [
+    "Goa",
+    2,
+    "2026-10-02",
+    2
+   ],
+   "out": [
+    {
+     "name": "Far Resort",
+     "price_per_night": 3000,
+     "rating": 4.6,
+     "address": "Goa",
+     "lat": 15.3,
+     "lon": 74.12,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Far%20Resort%2C%20Goa&center=15.3,74.12",
+     "booking_url": null,
+     "url": null
+    }
+   ]
+  }
+ ],
+ "search_transport": [
+  {
+   "args": [
+    "Bangalore",
+    "Munnar",
+    "2026-10-02",
+    2
+   ],
+   "out": {
+    "source": "live_web_search",
+    "route": "Bangalore → Munnar",
+    "options": [
+     {
+      "mode": "bus",
+      "option": "Non-AC / Standard Bus",
+      "provider": "TNSTC / KSRTC / State Transport",
+      "approx_fare": "₹447+",
+      "travel_time": "~8h",
+      "duration_hours": 8.1,
+      "notes": "Cheapest",
+      "price": 894,
+      "booking_url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar",
+      "links": [
+       {
+        "title": "redBus – Bangalore → Munnar",
+        "url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar"
+       },
+       {
+        "title": "MakeMyTrip – Bangalore → Munnar buses",
+        "url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html"
+       }
+      ]
+     },
+     {
+      "mode": "bus",
+      "option": "AC Seater / Sleeper Bus",
+      "provider": "Private Sleeper / redBus / MakeMyTrip",
+      "approx_fare": "₹733–₹1303+",
+      "travel_time": "~8–10h",
+      "duration_hours": 9.1,
+      "notes": "Better comfort",
+      "price": 1466,
+      "booking_url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar",
+      "links": [
+       {
+        "title": "redBus – Bangalore → Munnar",
+        "url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar"
+       },
+       {
+        "title": "MakeMyTrip – Bangalore → Munnar buses",
+        "url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html"
+       }
+      ]
+     },
+     {
+      "mode": "bus",
+      "option": "Premium Multi-Axle Sleeper",
+      "provider": "IntrCity / Orange / SRS Travels",
+      "approx_fare": "₹1221–₹2500",
+      "travel_time": "~8–9h",
+      "duration_hours": 8.1,
+      "notes": "Depends on operator",
+      "price": 2442,
+      "booking_url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html",
+      "links": [
+       {
+        "title": "MakeMyTrip – Bangalore → Munnar buses",
+        "url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html"
+       },
+       {
+        "title": "redBus – Bangalore → Munnar",
+        "url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar"
+       }
+      ]
+     },
+     {
+      "mode": "train",
+      "option": "Express / Superfast Train",
+      "provider": "Indian Railways (Express / Vande Bharat)",
+      "approx_fare": "₹285–₹814+",
+      "travel_time": "~7h",
+      "duration_hours": 7.4,
+      "notes": "Scenic & economical",
+      "price": 976,
+      "booking_url": "https://www.ixigo.com/trains/bangalore-to-munnar",
+      "links": [
+       {
+        "title": "ixigo Trains – Bangalore → Munnar",
+        "url": "https://www.ixigo.com/trains/bangalore-to-munnar"
+       },
+       {
+        "title": "ConfirmTkt – Bangalore → Munnar",
+        "url": "https://www.confirmtkt.com/train-running-status"
+       }
+      ]
+     },
+     {
+      "mode": "flight",
+      "option": "Direct / Connecting Flight",
+      "provider": "IndiGo / Air India / ixigo",
+      "approx_fare": "₹3200–₹6200+",
+      "travel_time": "~1.2h",
+      "duration_hours": 1.2,
+      "notes": "Fastest",
+      "price": 6400,
+      "booking_url": "https://www.ixigo.com/cheap-flights/bangalore-munnar",
+      "links": [
+       {
+        "title": "ixigo – BLR → COK flights",
+        "url": "https://www.ixigo.com/cheap-flights/bangalore-munnar"
+       },
+       {
+        "title": "Google Flights – BLR → COK",
+        "url": "https://www.google.com/travel/flights?q=flights%20from%20Bangalore%20to%20Munnar%20on%202026-10-02"
+       }
+      ]
+     }
+    ],
+    "organic_search_results": [
+     {
+      "title": "Bangalore to Munnar bus",
+      "url": "https://redbus.example/blr-munnar",
+      "snippet": "Book buses"
+     },
+     {
+      "title": "Trains",
+      "url": "https://ixigo.example/t",
+      "snippet": ""
+     }
+    ]
+   }
+  },
+  {
+   "args": [
+    "atlantis",
+    "el dorado",
+    "2026-12-01",
+    0
+   ],
+   "out": {
+    "source": "deep_link_search",
+    "route": "Atlantis → El Dorado",
+    "options": [
+     {
+      "mode": "bus",
+      "option": "Non-AC / Standard Bus",
+      "provider": "TNSTC / KSRTC / State Transport",
+      "approx_fare": "₹462+",
+      "travel_time": "~8h",
+      "duration_hours": 8.4,
+      "notes": "Cheapest",
+      "price": 462,
+      "booking_url": "https://www.redbus.in/bus-tickets/atlantis-to-el-dorado",
+      "links": [
+       {
+        "title": "redBus – Atlantis → El Dorado",
+        "url": "https://www.redbus.in/bus-tickets/atlantis-to-el-dorado"
+       },
+       {
+        "title": "MakeMyTrip – Atlantis → El Dorado buses",
+        "url": "https://www.makemytrip.com/bus-tickets/atlantis-el-dorado-bus-ticket-booking.html"
+       }
+      ]
+     },
+     {
+      "mode": "bus",
+      "option": "AC Seater / Sleeper Bus",
+      "provider": "Private Sleeper / redBus / MakeMyTrip",
+      "approx_fare": "₹756–₹1344+",
+      "travel_time": "~8–10h",
+      "duration_hours": 9.4,
+      "notes": "Better comfort",
+      "price": 756,
+      "booking_url": "https://www.redbus.in/bus-tickets/atlantis-to-el-dorado",
+      "links": [
+       {
+        "title": "redBus – Atlantis → El Dorado",
+        "url": "https://www.redbus.in/bus-tickets/atlantis-to-el-dorado"
+       },
+       {
+        "title": "MakeMyTrip – Atlantis → El Dorado buses",
+        "url": "https://www.makemytrip.com/bus-tickets/atlantis-el-dorado-bus-ticket-booking.html"
+       }
+      ]
+     },
+     {
+      "mode": "bus",
+      "option": "Premium Multi-Axle Sleeper",
+      "provider": "IntrCity / Orange / SRS Travels",
+      "approx_fare": "₹1260–₹2520",
+      "travel_time": "~8–9h",
+      "duration_hours": 8.4,
+      "notes": "Depends on operator",
+      "price": 1260,
+      "booking_url": "https://www.makemytrip.com/bus-tickets/atlantis-el-dorado-bus-ticket-booking.html",
+      "links": [
+       {
+        "title": "MakeMyTrip – Atlantis → El Dorado buses",
+        "url": "https://www.makemytrip.com/bus-tickets/atlantis-el-dorado-bus-ticket-booking.html"
+       },
+       {
+        "title": "redBus – Atlantis → El Dorado",
+        "url": "https://www.redbus.in/bus-tickets/atlantis-to-el-dorado"
+       }
+      ]
+     },
+     {
+      "mode": "train",
+      "option": "Express / Superfast Train",
+      "provider": "Indian Railways (Express / Vande Bharat)",
+      "approx_fare": "₹294–₹840+",
+      "travel_time": "~8h",
+      "duration_hours": 7.6,
+      "notes": "Scenic & economical",
+      "price": 504,
+      "booking_url": "https://www.ixigo.com/trains/atlantis-to-el-dorado",
+      "links": [
+       {
+        "title": "ixigo Trains – Atlantis → El Dorado",
+        "url": "https://www.ixigo.com/trains/atlantis-to-el-dorado"
+       },
+       {
+        "title": "ConfirmTkt – Atlantis → El Dorado",
+        "url": "https://www.confirmtkt.com/train-running-status"
+       }
+      ]
+     },
+     {
+      "mode": "flight",
+      "option": "Direct / Connecting Flight",
+      "provider": "IndiGo / Air India / ixigo",
+      "approx_fare": "₹3200–₹6200+",
+      "travel_time": "~1.3h",
+      "duration_hours": 1.3,
+      "notes": "Fastest",
+      "price": 3200,
+      "booking_url": "https://www.ixigo.com/cheap-flights/atlantis-el-dorado",
+      "links": [
+       {
+        "title": "ixigo – ATL → EL  flights",
+        "url": "https://www.ixigo.com/cheap-flights/atlantis-el-dorado"
+       },
+       {
+        "title": "Google Flights – ATL → EL ",
+        "url": "https://www.google.com/travel/flights?q=flights%20from%20Atlantis%20to%20El%20Dorado%20on%202026-12-01"
+       }
+      ]
+     }
+    ],
+    "organic_search_results": []
+   }
+  }
+ ],
+ "get_forecast": [
+  {
+   "args": [
+    "Munnar",
+    3,
+    "2026-10-02"
+   ],
+   "out": {
+    "source": "open-meteo",
+    "unavailable": false,
+    "days": [
+     {
+      "date": "2026-10-02",
+      "condition": "Moderate rain",
+      "rain_pct": 80,
+      "temp": "14.2°C – 21.5°C"
+     },
+     {
+      "date": "2026-10-03",
+      "condition": "Partly cloudy",
+      "rain_pct": 10,
+      "temp": "15.0°C – 23.1°C"
+     },
+     {
+      "date": "2026-10-04",
+      "condition": "Thunderstorm",
+      "rain_pct": 65,
+      "temp": "13.8°C – 20.0°C"
+     }
+    ]
+   },
+   "bad": true
+  },
+  {
+   "args": [
+    "Goa",
+    2,
+    "2026-10-02"
+   ],
+   "out": {
+    "source": "seasonal (same dates last year)",
+    "unavailable": false,
+    "days": [
+     {
+      "date": "2026-10-02",
+      "condition": "Slight rain",
+      "rain_pct": 52,
+      "temp": "24.1°C – 31.2°C"
+     },
+     {
+      "date": "2026-10-03",
+      "condition": "Partly cloudy",
+      "rain_pct": 100,
+      "temp": null
+     }
+    ]
+   },
+   "bad": false
+  },
+  {
+   "args": [
+    "Atlantis",
+    2,
+    "2026-10-02"
+   ],
+   "out": {
+    "source": "unavailable",
+    "unavailable": true,
+    "message": "Weather Tool: Open - Metreo api server down",
+    "days": [
+     {
+      "date": "2026-10-02",
+      "condition": "unknown",
+      "rain_pct": 0,
+      "temp": null
+     },
+     {
+      "date": "2026-10-03",
+      "condition": "unknown",
+      "rain_pct": 0,
+      "temp": null
+     }
+    ]
+   },
+   "bad": false
+  },
+  {
+   "args": [
+    "Munnar",
+    20,
+    "2026-10-02"
+   ],
+   "out": {
+    "source": "open-meteo",
+    "unavailable": false,
+    "days": [
+     {
+      "date": "2026-10-02",
+      "condition": "Moderate rain",
+      "rain_pct": 80,
+      "temp": "14.2°C – 21.5°C"
+     },
+     {
+      "date": "2026-10-03",
+      "condition": "Partly cloudy",
+      "rain_pct": 10,
+      "temp": "15.0°C – 23.1°C"
+     },
+     {
+      "date": "2026-10-04",
+      "condition": "Thunderstorm",
+      "rain_pct": 65,
+      "temp": "13.8°C – 20.0°C"
+     }
+    ]
+   },
+   "bad": true
+  }
+ ],
+ "itinerary": [
+  {
+   "requirements": {
+    "source": "Bangalore",
+    "destination": "Munnar",
+    "num_days": 3,
+    "num_travellers": 2,
+    "budget": 40000
+   },
+   "flights_result": {
+    "options": [
+     {
+      "mode": "bus",
+      "option": "Non-AC / Standard Bus",
+      "provider": "TNSTC / KSRTC / State Transport",
+      "approx_fare": "₹447+",
+      "travel_time": "~8h",
+      "duration_hours": 8.1,
+      "notes": "Cheapest",
+      "price": 894,
+      "booking_url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar",
+      "links": [
+       {
+        "title": "redBus – Bangalore → Munnar",
+        "url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar"
+       },
+       {
+        "title": "MakeMyTrip – Bangalore → Munnar buses",
+        "url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html"
+       }
+      ]
+     },
+     {
+      "mode": "bus",
+      "option": "AC Seater / Sleeper Bus",
+      "provider": "Private Sleeper / redBus / MakeMyTrip",
+      "approx_fare": "₹733–₹1303+",
+      "travel_time": "~8–10h",
+      "duration_hours": 9.1,
+      "notes": "Better comfort",
+      "price": 1466,
+      "booking_url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar",
+      "links": [
+       {
+        "title": "redBus – Bangalore → Munnar",
+        "url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar"
+       },
+       {
+        "title": "MakeMyTrip – Bangalore → Munnar buses",
+        "url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html"
+       }
+      ]
+     },
+     {
+      "mode": "bus",
+      "option": "Premium Multi-Axle Sleeper",
+      "provider": "IntrCity / Orange / SRS Travels",
+      "approx_fare": "₹1221–₹2500",
+      "travel_time": "~8–9h",
+      "duration_hours": 8.1,
+      "notes": "Depends on operator",
+      "price": 2442,
+      "booking_url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html",
+      "links": [
+       {
+        "title": "MakeMyTrip – Bangalore → Munnar buses",
+        "url": "https://www.makemytrip.com/bus-tickets/bangalore-munnar-bus-ticket-booking.html"
+       },
+       {
+        "title": "redBus – Bangalore → Munnar",
+        "url": "https://www.redbus.in/bus-tickets/bangalore-to-munnar"
+       }
+      ]
+     },
+     {
+      "mode": "train",
+      "option": "Express / Superfast Train",
+      "provider": "Indian Railways (Express / Vande Bharat)",
+      "approx_fare": "₹285–₹814+",
+      "travel_time": "~7h",
+      "duration_hours": 7.4,
+      "notes": "Scenic & economical",
+      "price": 976,
+      "booking_url": "https://www.ixigo.com/trains/bangalore-to-munnar",
+      "links": [
+       {
+        "title": "ixigo Trains – Bangalore → Munnar",
+        "url": "https://www.ixigo.com/trains/bangalore-to-munnar"
+       },
+       {
+        "title": "ConfirmTkt – Bangalore → Munnar",
+        "url": "https://www.confirmtkt.com/train-running-status"
+       }
+      ]
+     },
+     {
+      "mode": "flight",
+      "option": "Direct / Connecting Flight",
+      "provider": "IndiGo / Air India / ixigo",
+      "approx_fare": "₹3200–₹6200+",
+      "travel_time": "~1.2h",
+      "duration_hours": 1.2,
+      "notes": "Fastest",
+      "price": 6400,
+      "booking_url": "https://www.ixigo.com/cheap-flights/bangalore-munnar",
+      "links": [
+       {
+        "title": "ixigo – BLR → COK flights",
+        "url": "https://www.ixigo.com/cheap-flights/bangalore-munnar"
+       },
+       {
+        "title": "Google Flights – BLR → COK",
+        "url": "https://www.google.com/travel/flights?q=flights%20from%20Bangalore%20to%20Munnar%20on%202026-10-02"
+       }
+      ]
+     }
+    ],
+    "selected": {
+     "mode": "flight",
+     "option": "Direct / Connecting Flight",
+     "provider": "IndiGo / Air India / ixigo",
+     "approx_fare": "₹3200–₹6200+",
+     "travel_time": "~1.2h",
+     "duration_hours": 1.2,
+     "notes": "Fastest",
+     "price": 6400,
+     "booking_url": "https://www.ixigo.com/cheap-flights/bangalore-munnar",
+     "links": [
+      {
+       "title": "ixigo – BLR → COK flights",
+       "url": "https://www.ixigo.com/cheap-flights/bangalore-munnar"
+      },
+      {
+       "title": "Google Flights – BLR → COK",
+       "url": "https://www.google.com/travel/flights?q=flights%20from%20Bangalore%20to%20Munnar%20on%202026-10-02"
+      }
+     ]
+    },
+    "source": "live_web_search"
+   },
+   "places_result": {
+    "places": [
+     {
+      "name": "Eravikulam National Park",
+      "category": "National park",
+      "types": [
+       "National park"
+      ],
+      "address": "Munnar",
+      "rating": 4.5,
+      "rating_count": 20500,
+      "hours": "Open ⋅ Closes 4 PM",
+      "phone": null,
+      "website": null,
+      "lat": 10.1929,
+      "lon": 77.0877,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Eravikulam%20National%20Park%2C%20Munnar&center=10.1929,77.0877",
+      "indoor": false,
+      "price_level": "₹200",
+      "est_cost": 200,
+      "dist_to_next_km": null
+     },
+     {
+      "name": "Station Viewpoint",
+      "category": "Tourist attraction",
+      "types": [
+       "Tourist attraction",
+       "Scenic spot"
+      ],
+      "address": "Top Station, Kerala",
+      "rating": 4.6,
+      "rating_count": 12850,
+      "hours": "6 AM–6 PM",
+      "phone": null,
+      "website": null,
+      "lat": 10.1256,
+      "lon": 77.2436,
+      "maps_url": "https://www.google.com/maps?cid=1111",
+      "indoor": false,
+      "price_level": null,
+      "est_cost": 30,
+      "dist_to_next_km": null
+     },
+     {
+      "name": "Mattupetty Dam",
+      "category": "Dam",
+      "types": [],
+      "address": "Mattupetty, Munnar",
+      "rating": 4.3,
+      "rating_count": 9800,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.1063,
+      "lon": 77.1238,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Mattupetty%20Dam%2C%20Mattupetty%2C%20Munnar&center=10.1063,77.1238",
+      "indoor": false,
+      "price_level": "₹20",
+      "est_cost": 20,
+      "dist_to_next_km": 10.4
+     },
+     {
+      "name": "5. Tea Museum",
+      "category": "Museum",
+      "types": [],
+      "address": "KDHP, Munnar",
+      "rating": 4.2,
+      "rating_count": 5400,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0953,
+      "lon": 77.059,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=5.%20Tea%20Museum%2C%20KDHP%2C%20Munnar&center=10.0953,77.059",
+      "indoor": false,
+      "price_level": "$$",
+      "est_cost": 450,
+      "dist_to_next_km": 7.2
+     },
+     {
+      "name": "Tea Museum",
+      "category": "Museum",
+      "types": [
+       "Museum"
+      ],
+      "address": "KDHP",
+      "rating": 4.2,
+      "rating_count": 5400,
+      "hours": "mon 9 AM–5 PM; tue 9 AM–5 PM; wed Closed",
+      "phone": null,
+      "website": null,
+      "lat": 10.0953,
+      "lon": 77.059,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Tea%20Museum%2C%20KDHP&center=10.0953,77.059",
+      "indoor": false,
+      "price_level": null,
+      "est_cost": 200,
+      "dist_to_next_km": 9.9
+     },
+     {
+      "name": "Photo Point",
+      "category": "Scenic spot",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.1,
+      "rating_count": 2300,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.0762,
+      "lon": 77.0802,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Photo%20Point%2C%20Munnar&center=10.0762,77.0802",
+      "indoor": false,
+      "price_level": "₹165–330",
+      "est_cost": 247.5,
+      "dist_to_next_km": 18.7
+     },
+     {
+      "name": "Lockhart Gap Viewpoint",
+      "category": "Viewpoint",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.7,
+      "rating_count": 800,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.04,
+      "lon": 77.13,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Lockhart%20Gap%20Viewpoint%2C%20Munnar&center=10.04,77.13",
+      "indoor": false,
+      "price_level": null,
+      "est_cost": 30,
+      "dist_to_next_km": null
+     },
+     {
+      "name": "Munnar Art Gallery",
+      "category": "Art gallery",
+      "types": [],
+      "address": "Munnar",
+      "rating": 3.9,
+      "rating_count": 150,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.087,
+      "lon": 77.061,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Art%20Gallery%2C%20Munnar&center=10.087,77.061",
+      "indoor": false,
+      "price_level": "moderate",
+      "est_cost": 450,
+      "dist_to_next_km": 2.4
+     },
+     {
+      "name": "Hidden Waterfall",
+      "category": "Waterfall",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.8,
+      "rating_count": 12,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": null,
+      "lon": null,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Hidden%20Waterfall%2C%20Munnar",
+      "indoor": false,
+      "price_level": "$",
+      "est_cost": 150,
+      "dist_to_next_km": null
+     },
+     {
+      "name": "Tea Museum",
+      "category": "Museum",
+      "types": [
+       "Museum"
+      ],
+      "address": "KDHP",
+      "rating": 4.2,
+      "rating_count": 5400,
+      "hours": "mon 9 AM–5 PM; tue 9 AM–5 PM; wed Closed",
+      "phone": null,
+      "website": null,
+      "lat": 10.0953,
+      "lon": 77.059,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Tea%20Museum%2C%20KDHP&center=10.0953,77.059",
+      "indoor": true,
+      "price_level": null,
+      "est_cost": 200
+     },
+     {
+      "name": "Lockhart Gap Viewpoint",
+      "category": "Viewpoint",
+      "types": [],
+      "address": "Munnar",
+      "rating": 4.7,
+      "rating_count": 800,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.04,
+      "lon": 77.13,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Lockhart%20Gap%20Viewpoint%2C%20Munnar&center=10.04,77.13",
+      "indoor": true,
+      "price_level": null,
+      "est_cost": 30
+     },
+     {
+      "name": "Munnar Art Gallery",
+      "category": "Art gallery",
+      "types": [],
+      "address": "Munnar",
+      "rating": 3.9,
+      "rating_count": 150,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "lat": 10.087,
+      "lon": 77.061,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Art%20Gallery%2C%20Munnar&center=10.087,77.061",
+      "indoor": true,
+      "price_level": "moderate",
+      "est_cost": 450
+     }
+    ],
+    "restaurants": {
+     "Breakfast": [
+      {
+       "name": "Saravana Bhavan",
+       "category": "South Indian restaurant",
+       "types": [],
+       "address": "Main Bazaar",
+       "rating": 4.1,
+       "rating_count": 2100,
+       "hours": null,
+       "phone": null,
+       "website": null,
+       "lat": 10.089,
+       "lon": 77.06,
+       "maps_url": "https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%2C%20Main%20Bazaar&center=10.089,77.06",
+       "indoor": true,
+       "price_level": "₹100–200",
+       "est_cost": 150
+      },
+      {
+       "name": "Rapsy Restaurant",
+       "category": "breakfast spot",
+       "types": [],
+       "address": "Munnar",
+       "rating": 4.3,
+       "rating_count": 3400,
+       "hours": null,
+       "phone": null,
+       "website": null,
+       "lat": 10.0885,
+       "lon": 77.0612,
+       "maps_url": "https://www.google.com/maps/search/?api=1&query=Rapsy%20Restaurant%2C%20Munnar&center=10.0885,77.0612",
+       "indoor": true,
+       "price_level": "$",
+       "est_cost": 150
+      }
+     ],
+     "Lunch": [
+      {
+       "name": "Hotel Sree Krishna",
+       "category": "Vegetarian restaurant",
+       "types": [],
+       "address": "Munnar",
+       "rating": 4.2,
+       "rating_count": 900,
+       "hours": null,
+       "phone": null,
+       "website": null,
+       "lat": 10.0871,
+       "lon": 77.0588,
+       "maps_url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588",
+       "indoor": true,
+       "price_level": "₹600–1800 for two",
+       "est_cost": 600
+      }
+     ],
+     "Dinner": [
+      {
+       "name": "Guru's Restaurant",
+       "category": "dinner spot",
+       "types": [],
+       "address": "Munnar",
+       "rating": 4.4,
+       "rating_count": 1500,
+       "hours": null,
+       "phone": null,
+       "website": null,
+       "lat": 10.0902,
+       "lon": 77.0601,
+       "maps_url": "https://www.google.com/maps/search/?api=1&query=Guru%27s%20Restaurant%2C%20Munnar&center=10.0902,77.0601",
+       "indoor": true,
+       "price_level": "₹1898–2558",
+       "est_cost": 2227.5
+      },
+      {
+       "name": "Taste of Munnar",
+       "category": "dinner spot",
+       "types": [],
+       "address": "Munnar",
+       "rating": 4.1,
+       "rating_count": 300,
+       "hours": null,
+       "phone": null,
+       "website": null,
+       "lat": null,
+       "lon": null,
+       "maps_url": "https://www.google.com/maps/search/?api=1&query=Taste%20of%20Munnar%2C%20Munnar",
+       "indoor": true,
+       "price_level": null,
+       "est_cost": 450
+      }
+     ]
+    },
+    "accommodation": {
+     "name": "Munnar Tea Hills Resort",
+     "price_per_night": 5200,
+     "rating": 4.4,
+     "address": "Munnar",
+     "lat": 10.085,
+     "lon": 77.065,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Tea%20Hills%20Resort%2C%20Munnar&center=10.085,77.065",
+     "booking_url": "https://hotels.example/teahills",
+     "url": "https://hotels.example/teahills"
+    },
+    "accommodation_options": [
+     {
+      "name": "Munnar Tea Hills Resort",
+      "price_per_night": 5200,
+      "rating": 4.4,
+      "address": "Munnar",
+      "lat": 10.085,
+      "lon": 77.065,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Tea%20Hills%20Resort%2C%20Munnar&center=10.085,77.065",
+      "booking_url": "https://hotels.example/teahills",
+      "url": "https://hotels.example/teahills"
+     },
+     {
+      "name": "Budget Inn",
+      "price_per_night": 3400,
+      "rating": 3.9,
+      "address": "Munnar",
+      "lat": 10.092,
+      "lon": 77.058,
+      "maps_url": "https://www.google.com/maps/search/?api=1&query=Budget%20Inn%2C%20Munnar&center=10.092,77.058",
+      "booking_url": null,
+      "url": null
+     }
+    ],
+    "weather": {
+     "source": "open-meteo",
+     "unavailable": false,
+     "days": [
+      {
+       "date": "2026-10-02",
+       "condition": "Moderate rain",
+       "rain_pct": 80,
+       "temp": "14.2°C – 21.5°C"
+      },
+      {
+       "date": "2026-10-03",
+       "condition": "Partly cloudy",
+       "rain_pct": 10,
+       "temp": "15.0°C – 23.1°C"
+      },
+      {
+       "date": "2026-10-04",
+       "condition": "Thunderstorm",
+       "rain_pct": 65,
+       "temp": "13.8°C – 20.0°C"
+      }
+     ]
+    },
+    "indoor_mode": false,
+    "weather_declined": true
+   },
+   "budget": {
+    "ok": true,
+    "total": 36025,
+    "cap": 40000,
+    "overage": 0,
+    "breakdown": {
+     "transport": 6400,
+     "lodging": 10400,
+     "food": 14310,
+     "activities": 4915
+    }
+   },
+   "itinerary": {
+    "route": "Bangalore → Munnar",
+    "transport": {
+     "mode": "flight",
+     "option": "Direct / Connecting Flight",
+     "provider": "IndiGo / Air India / ixigo",
+     "approx_fare": "₹3200–₹6200+",
+     "travel_time": "~1.2h",
+     "duration_hours": 1.2,
+     "notes": "Fastest",
+     "price": 6400,
+     "booking_url": "https://www.ixigo.com/cheap-flights/bangalore-munnar",
+     "links": [
+      {
+       "title": "ixigo – BLR → COK flights",
+       "url": "https://www.ixigo.com/cheap-flights/bangalore-munnar"
+      },
+      {
+       "title": "Google Flights – BLR → COK",
+       "url": "https://www.google.com/travel/flights?q=flights%20from%20Bangalore%20to%20Munnar%20on%202026-10-02"
+      }
+     ]
+    },
+    "accommodation": {
+     "name": "Munnar Tea Hills Resort",
+     "price_per_night": 5200,
+     "rating": 4.4,
+     "address": "Munnar",
+     "lat": 10.085,
+     "lon": 77.065,
+     "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Tea%20Hills%20Resort%2C%20Munnar&center=10.085,77.065",
+     "booking_url": "https://hotels.example/teahills",
+     "url": "https://hotels.example/teahills"
+    },
+    "cards": [
+     {
+      "day": 1,
+      "date": "2026-10-02",
+      "note": "Explore museums, art and indoor discoveries including Munnar Art Gallery and Station Viewpoint. Carry an umbrella as moderate rain is expected.",
+      "weather": {
+       "condition": "Moderate rain",
+       "temp": "14.2°C – 21.5°C",
+       "rain_pct": 80
+      },
+      "activities": [
+       {
+        "time": "09:30",
+        "name": "Munnar Art Gallery",
+        "category": "Art gallery",
+        "hours": null,
+        "rating": 3.9,
+        "address": "Munnar",
+        "lat": 10.087,
+        "lon": 77.061,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Munnar%20Art%20Gallery%2C%20Munnar&center=10.087,77.061",
+        "dist_to_next_km": 2.4,
+        "price_level": "moderate",
+        "est_cost": 450
+       },
+       {
+        "time": "12:00",
+        "name": "Photo Point",
+        "category": "Scenic spot",
+        "hours": null,
+        "rating": 4.1,
+        "address": "Munnar",
+        "lat": 10.0762,
+        "lon": 77.0802,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Photo%20Point%2C%20Munnar&center=10.0762,77.0802",
+        "dist_to_next_km": 18.7,
+        "price_level": "₹165–330",
+        "est_cost": 247.5
+       },
+       {
+        "time": "16:00",
+        "name": "Station Viewpoint",
+        "category": "Tourist attraction",
+        "hours": "6 AM–6 PM",
+        "rating": 4.6,
+        "address": "Top Station, Kerala",
+        "lat": 10.1256,
+        "lon": 77.2436,
+        "maps_url": "https://www.google.com/maps?cid=1111",
+        "dist_to_next_km": null,
+        "price_level": null,
+        "est_cost": 30
+       }
+      ],
+      "meals": [
+       {
+        "meal": "Breakfast",
+        "time": "08:30",
+        "name": "Saravana Bhavan",
+        "hours": null,
+        "rating": 4.1,
+        "address": "Main Bazaar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%2C%20Main%20Bazaar&center=10.089,77.06",
+        "lat": 10.089,
+        "lon": 77.06,
+        "price_level": "₹100–200",
+        "est_cost": 150
+       },
+       {
+        "meal": "Lunch",
+        "time": "13:00",
+        "name": "Hotel Sree Krishna",
+        "hours": null,
+        "rating": 4.2,
+        "address": "Munnar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588",
+        "lat": 10.0871,
+        "lon": 77.0588,
+        "price_level": "₹600–1800 for two",
+        "est_cost": 600
+       },
+       {
+        "meal": "Dinner",
+        "time": "20:00",
+        "name": "Guru's Restaurant",
+        "hours": null,
+        "rating": 4.4,
+        "address": "Munnar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Guru%27s%20Restaurant%2C%20Munnar&center=10.0902,77.0601",
+        "lat": 10.0902,
+        "lon": 77.0601,
+        "price_level": "₹1898–2558",
+        "est_cost": 2227.5
+       }
+      ],
+      "from_stay_km": 0.7,
+      "to_stay_km": 0.8,
+      "day_km": 48
+     },
+     {
+      "day": 2,
+      "date": "2026-10-03",
+      "note": "Explore scenic nature and outdoor viewpoints including 5. Tea Museum and Eravikulam National Park.",
+      "weather": {
+       "condition": "Partly cloudy",
+       "temp": "15.0°C – 23.1°C",
+       "rain_pct": 10
+      },
+      "activities": [
+       {
+        "time": "09:30",
+        "name": "5. Tea Museum",
+        "category": "Museum",
+        "hours": null,
+        "rating": 4.2,
+        "address": "KDHP, Munnar",
+        "lat": 10.0953,
+        "lon": 77.059,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=5.%20Tea%20Museum%2C%20KDHP%2C%20Munnar&center=10.0953,77.059",
+        "dist_to_next_km": 7.2,
+        "price_level": "$$",
+        "est_cost": 450
+       },
+       {
+        "time": "12:00",
+        "name": "Mattupetty Dam",
+        "category": "Dam",
+        "hours": null,
+        "rating": 4.3,
+        "address": "Mattupetty, Munnar",
+        "lat": 10.1063,
+        "lon": 77.1238,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Mattupetty%20Dam%2C%20Mattupetty%2C%20Munnar&center=10.1063,77.1238",
+        "dist_to_next_km": 10.4,
+        "price_level": "₹20",
+        "est_cost": 20
+       },
+       {
+        "time": "16:00",
+        "name": "Eravikulam National Park",
+        "category": "National park",
+        "hours": "Open ⋅ Closes 4 PM",
+        "rating": 4.5,
+        "address": "Munnar",
+        "lat": 10.1929,
+        "lon": 77.0877,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Eravikulam%20National%20Park%2C%20Munnar&center=10.1929,77.0877",
+        "dist_to_next_km": null,
+        "price_level": "₹200",
+        "est_cost": 200
+       }
+      ],
+      "meals": [
+       {
+        "meal": "Breakfast",
+        "time": "08:30",
+        "name": "Rapsy Restaurant",
+        "hours": null,
+        "rating": 4.3,
+        "address": "Munnar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Rapsy%20Restaurant%2C%20Munnar&center=10.0885,77.0612",
+        "lat": 10.0885,
+        "lon": 77.0612,
+        "price_level": "$",
+        "est_cost": 150
+       },
+       {
+        "meal": "Lunch",
+        "time": "13:00",
+        "name": "Hotel Sree Krishna",
+        "hours": null,
+        "rating": 4.2,
+        "address": "Munnar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588",
+        "lat": 10.0871,
+        "lon": 77.0588,
+        "price_level": "₹600–1800 for two",
+        "est_cost": 600
+       },
+       {
+        "meal": "Dinner",
+        "time": "20:00",
+        "name": "Taste of Munnar",
+        "hours": null,
+        "rating": 4.1,
+        "address": "Munnar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Taste%20of%20Munnar%2C%20Munnar",
+        "lat": null,
+        "lon": null,
+        "price_level": null,
+        "est_cost": 450
+       }
+      ],
+      "from_stay_km": 0.6,
+      "to_stay_km": 12.3,
+      "day_km": 40.5
+     },
+     {
+      "day": 3,
+      "date": "2026-10-04",
+      "note": "Explore museums, art and indoor discoveries including Tea Museum and Hidden Waterfall. Carry an umbrella as thunderstorm is expected.",
+      "weather": {
+       "condition": "Thunderstorm",
+       "temp": "13.8°C – 20.0°C",
+       "rain_pct": 65
+      },
+      "activities": [
+       {
+        "time": "09:30",
+        "name": "Tea Museum",
+        "category": "Museum",
+        "hours": "mon 9 AM–5 PM; tue 9 AM–5 PM; wed Closed",
+        "rating": 4.2,
+        "address": "KDHP",
+        "lat": 10.0953,
+        "lon": 77.059,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Tea%20Museum%2C%20KDHP&center=10.0953,77.059",
+        "dist_to_next_km": 9.9,
+        "price_level": null,
+        "est_cost": 200
+       },
+       {
+        "time": "12:00",
+        "name": "Lockhart Gap Viewpoint",
+        "category": "Viewpoint",
+        "hours": null,
+        "rating": 4.7,
+        "address": "Munnar",
+        "lat": 10.04,
+        "lon": 77.13,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Lockhart%20Gap%20Viewpoint%2C%20Munnar&center=10.04,77.13",
+        "dist_to_next_km": null,
+        "price_level": null,
+        "est_cost": 30
+       },
+       {
+        "time": "16:00",
+        "name": "Hidden Waterfall",
+        "category": "Waterfall",
+        "hours": null,
+        "rating": 4.8,
+        "address": "Munnar",
+        "lat": null,
+        "lon": null,
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Hidden%20Waterfall%2C%20Munnar",
+        "dist_to_next_km": null,
+        "price_level": "$",
+        "est_cost": 150
+       }
+      ],
+      "meals": [
+       {
+        "meal": "Breakfast",
+        "time": "08:30",
+        "name": "Saravana Bhavan",
+        "hours": null,
+        "rating": 4.1,
+        "address": "Main Bazaar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%2C%20Main%20Bazaar&center=10.089,77.06",
+        "lat": 10.089,
+        "lon": 77.06,
+        "price_level": "₹100–200",
+        "est_cost": 150
+       },
+       {
+        "meal": "Lunch",
+        "time": "13:00",
+        "name": "Hotel Sree Krishna",
+        "hours": null,
+        "rating": 4.2,
+        "address": "Munnar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588",
+        "lat": 10.0871,
+        "lon": 77.0588,
+        "price_level": "₹600–1800 for two",
+        "est_cost": 600
+       },
+       {
+        "meal": "Dinner",
+        "time": "20:00",
+        "name": "Guru's Restaurant",
+        "hours": null,
+        "rating": 4.4,
+        "address": "Munnar",
+        "maps_url": "https://www.google.com/maps/search/?api=1&query=Guru%27s%20Restaurant%2C%20Munnar&center=10.0902,77.0601",
+        "lat": 10.0902,
+        "lon": 77.0601,
+        "price_level": "₹1898–2558",
+        "est_cost": 2227.5
+       }
+      ],
+      "from_stay_km": 0.7,
+      "to_stay_km": 0.8,
+      "day_km": 21.9
+     }
+    ],
+    "total_travel_km": 110.4,
+    "weather_source": "open-meteo",
+    "weather_unavailable": false,
+    "indoor_mode": false,
+    "weather_declined": true
+   },
+   "rendered": "  Bangalore → Munnar\n  Transport : Direct / Connecting Flight — ~1.2h — ₹3200–₹6200+ (Fastest)\n              ↳ Booking : [ixigo – BLR → COK flights](https://www.ixigo.com/cheap-flights/bangalore-munnar) · [Google Flights – BLR → COK](https://www.google.com/travel/flights?q=flights%20from%20Bangalore%20to%20Munnar%20on%202026-10-02)\n  Legwork   : ~110.4 km of local travel\n\n┌ Day 1 · 2026-10-02 ───────────────────────────────────────────\n│ Explore museums, art and indoor discoveries including Munnar Art Gallery and Station Viewpoint. Carry an umbrella as moderate rain is expected.\n│ Weather : Moderate rain, 14.2°C – 21.5°C, rain 80%\n│ Stay    : Munnar Tea Hills Resort  ~₹5200/night\n│         ↳ https://www.google.com/maps/search/?api=1&query=Munnar%20Tea%20Hills%20Resort%2C%20Munnar&center=10.085,77.065\n├ Plan\n│         ⌂ stay → first stop · 0.7 km\n│\n│  08:30  Breakfast · Saravana Bhavan\n│         Rating : ★4.1\n│         Price  : ₹100–200\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%2C%20Main%20Bazaar&center=10.089,77.06\n│\n│  09:30  Munnar Art Gallery\n│         Rating : ★3.9\n│         Price  : moderate\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Munnar%20Art%20Gallery%2C%20Munnar&center=10.087,77.061\n│         → 2.4 km to next stop\n│\n│  12:00  Photo Point\n│         Rating : ★4.1\n│         Price  : ₹165–330\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Photo%20Point%2C%20Munnar&center=10.0762,77.0802\n│         → 18.7 km to next stop\n│\n│  13:00  Lunch · Hotel Sree Krishna\n│         Rating : ★4.2\n│         Price  : ₹600–1800 for two\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588\n│\n│  16:00  Station Viewpoint\n│         Rating : ★4.6\n│         Price  : ~₹30/pp\n│         Timings: 6 AM–6 PM\n│         Maps   : https://www.google.com/maps?cid=1111\n│\n│  20:00  Dinner · Guru's Restaurant\n│         Rating : ★4.4\n│         Price  : ₹1898–2558\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Guru%27s%20Restaurant%2C%20Munnar&center=10.0902,77.0601\n│\n│         last stop → ⌂ stay · 0.8 km\n│         day total · 48.0 km\n└───────────────────────────────────────────────────────────────\n\n┌ Day 2 · 2026-10-03 ───────────────────────────────────────────\n│ Explore scenic nature and outdoor viewpoints including 5. Tea Museum and Eravikulam National Park.\n│ Weather : Partly cloudy, 15.0°C – 23.1°C, rain 10%\n│ Stay    : Munnar Tea Hills Resort  ~₹5200/night\n│         ↳ https://www.google.com/maps/search/?api=1&query=Munnar%20Tea%20Hills%20Resort%2C%20Munnar&center=10.085,77.065\n├ Plan\n│         ⌂ stay → first stop · 0.6 km\n│\n│  08:30  Breakfast · Rapsy Restaurant\n│         Rating : ★4.3\n│         Price  : $\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Rapsy%20Restaurant%2C%20Munnar&center=10.0885,77.0612\n│\n│  09:30  5. Tea Museum\n│         Rating : ★4.2\n│         Price  : $$\n│         Maps   : https://www.google.com/maps/search/?api=1&query=5.%20Tea%20Museum%2C%20KDHP%2C%20Munnar&center=10.0953,77.059\n│         → 7.2 km to next stop\n│\n│  12:00  Mattupetty Dam\n│         Rating : ★4.3\n│         Price  : ₹20\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Mattupetty%20Dam%2C%20Mattupetty%2C%20Munnar&center=10.1063,77.1238\n│         → 10.4 km to next stop\n│\n│  13:00  Lunch · Hotel Sree Krishna\n│         Rating : ★4.2\n│         Price  : ₹600–1800 for two\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588\n│\n│  16:00  Eravikulam National Park\n│         Rating : ★4.5\n│         Price  : ₹200\n│         Timings: Open ⋅ Closes 4 PM\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Eravikulam%20National%20Park%2C%20Munnar&center=10.1929,77.0877\n│\n│  20:00  Dinner · Taste of Munnar\n│         Rating : ★4.1\n│         Price  : ~₹450/pp\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Taste%20of%20Munnar%2C%20Munnar\n│\n│         last stop → ⌂ stay · 12.3 km\n│         day total · 40.5 km\n└───────────────────────────────────────────────────────────────\n\n┌ Day 3 · 2026-10-04 ───────────────────────────────────────────\n│ Explore museums, art and indoor discoveries including Tea Museum and Hidden Waterfall. Carry an umbrella as thunderstorm is expected.\n│ Weather : Thunderstorm, 13.8°C – 20.0°C, rain 65%\n│ Stay    : Munnar Tea Hills Resort  ~₹5200/night\n│         ↳ https://www.google.com/maps/search/?api=1&query=Munnar%20Tea%20Hills%20Resort%2C%20Munnar&center=10.085,77.065\n├ Plan\n│         ⌂ stay → first stop · 0.7 km\n│\n│  08:30  Breakfast · Saravana Bhavan\n│         Rating : ★4.1\n│         Price  : ₹100–200\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%2C%20Main%20Bazaar&center=10.089,77.06\n│\n│  09:30  Tea Museum\n│         Rating : ★4.2\n│         Price  : ~₹200/pp\n│         Timings: mon 9 AM–5 PM; tue 9 AM–5 PM; wed Closed\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Tea%20Museum%2C%20KDHP&center=10.0953,77.059\n│         → 9.9 km to next stop\n│\n│  12:00  Lockhart Gap Viewpoint\n│         Rating : ★4.7\n│         Price  : ~₹30/pp\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Lockhart%20Gap%20Viewpoint%2C%20Munnar&center=10.04,77.13\n│\n│  13:00  Lunch · Hotel Sree Krishna\n│         Rating : ★4.2\n│         Price  : ₹600–1800 for two\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Hotel%20Sree%20Krishna%2C%20Munnar&center=10.0871,77.0588\n│\n│  16:00  Hidden Waterfall\n│         Rating : ★4.8\n│         Price  : $\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Hidden%20Waterfall%2C%20Munnar\n│\n│  20:00  Dinner · Guru's Restaurant\n│         Rating : ★4.4\n│         Price  : ₹1898–2558\n│         Maps   : https://www.google.com/maps/search/?api=1&query=Guru%27s%20Restaurant%2C%20Munnar&center=10.0902,77.0601\n│\n│         last stop → ⌂ stay · 0.8 km\n│         day total · 21.9 km\n└───────────────────────────────────────────────────────────────\n\n  Budget    : ₹36025 / cap ₹40000  (within budget)\n              transport ₹6400 · lodging ₹10400 · food ₹14310 · activities ₹4915\n  ⚠ Indoor switch declined despite a poor forecast — outdoor plans may be disrupted."
+  },
+  {
+   "requirements": {
+    "source": "Atlantis",
+    "num_days": 2
+   },
+   "flights_result": {
+    "selected": {
+     "mode": "ferry",
+     "provider": "Poseidon Lines",
+     "duration_hours": 5,
+     "price": 1234.5,
+     "booking_url": "https://ferry.example/book"
+    }
+   },
+   "places_result": {
+    "places": [],
+    "restaurants": {},
+    "accommodation": {},
+    "weather": {
+     "source": "unavailable",
+     "unavailable": true,
+     "message": "Weather Tool: Open - Metreo api server down",
+     "days": [
+      {
+       "date": "2026-10-02",
+       "condition": "unknown",
+       "rain_pct": 0,
+       "temp": null
+      },
+      {
+       "date": "2026-10-03",
+       "condition": "unknown",
+       "rain_pct": 0,
+       "temp": null
+      }
+     ]
+    }
+   },
+   "budget": {
+    "ok": false,
+    "total": 1234.5,
+    "cap": 1000,
+    "overage": 234.5,
+    "breakdown": {
+     "transport": 1234.5,
+     "lodging": 0,
+     "food": 0,
+     "activities": 0
+    }
+   },
+   "itinerary": {
+    "route": "Atlantis → None",
+    "transport": {
+     "mode": "ferry",
+     "provider": "Poseidon Lines",
+     "duration_hours": 5,
+     "price": 1234.5,
+     "booking_url": "https://ferry.example/book"
+    },
+    "accommodation": {},
+    "cards": [
+     {
+      "day": 1,
+      "date": "2026-10-02",
+      "note": null,
+      "weather": {
+       "condition": "unknown",
+       "temp": null,
+       "rain_pct": 0
+      },
+      "activities": [],
+      "meals": [],
+      "from_stay_km": null,
+      "to_stay_km": null,
+      "day_km": null
+     },
+     {
+      "day": 2,
+      "date": "2026-10-03",
+      "note": null,
+      "weather": {
+       "condition": "unknown",
+       "temp": null,
+       "rain_pct": 0
+      },
+      "activities": [],
+      "meals": [],
+      "from_stay_km": null,
+      "to_stay_km": null,
+      "day_km": null
+     }
+    ],
+    "total_travel_km": null,
+    "weather_source": "unavailable",
+    "weather_unavailable": true,
+    "indoor_mode": false,
+    "weather_declined": false
+   },
+   "rendered": "  Atlantis → None\n  Transport : Ferry via Poseidon Lines — 5.0h — ₹1234\n              ↳ Booking : https://ferry.example/book\n  Weather   : Weather Tool: Open - Metreo api server down\n\n┌ Day 1 · 2026-10-02 ───────────────────────────────────────────\n│ Weather : unknown, rain 0%\n│ Stay    : —\n├ Plan\n└───────────────────────────────────────────────────────────────\n\n┌ Day 2 · 2026-10-03 ───────────────────────────────────────────\n│ Weather : unknown, rain 0%\n│ Stay    : —\n├ Plan\n└───────────────────────────────────────────────────────────────\n\n  Budget    : ₹1234 / cap ₹1000  (OVER by ₹234)\n              transport ₹1234 · lodging ₹0 · food ₹0 · activities ₹0"
+  },
+  {
+   "requirements": {
+    "source": "Kochi",
+    "destination": "Munnar",
+    "num_days": 2
+   },
+   "flights_result": {
+    "selected": {
+     "option": "Cab",
+     "travel_time": "~4h",
+     "approx_fare": "₹3000",
+     "notes": "Door to door",
+     "links": [
+      "https://cab.example",
+      {
+       "title": "Uber",
+       "url": "https://uber.example"
+      }
+     ]
+    }
+   },
+   "places_result": {
+    "places": [
+     {
+      "name": "A Temple",
+      "category": "Temple",
+      "types": [
+       "Hindu temple"
+      ],
+      "lat": 10,
+      "lon": 77,
+      "est_cost": 30,
+      "indoor": false,
+      "dist_to_next_km": 24.8
+     },
+     {
+      "name": "B Museum",
+      "category": "Museum",
+      "types": [],
+      "lat": "10.05",
+      "lon": "77.02",
+      "indoor": true,
+      "price_level": "$$",
+      "est_cost": 450,
+      "dist_to_next_km": null
+     },
+     {
+      "name": "C Park",
+      "category": "Park",
+      "types": [
+       "Garden"
+      ],
+      "lat": 10.2,
+      "lon": 77.1,
+      "indoor": false,
+      "est_cost": 0,
+      "dist_to_next_km": null
+     },
+     {
+      "name": "D Gallery",
+      "category": "Gallery",
+      "indoor": true,
+      "dist_to_next_km": null
+     },
+     {
+      "name": "E Falls",
+      "category": "Waterfall",
+      "types": [
+       "falls"
+      ],
+      "lat": 10.1,
+      "lon": 77.3,
+      "est_cost": 100
+     }
+    ],
+    "restaurants": {
+     "Breakfast": [
+      {
+       "name": "Only Cafe",
+       "est_cost": 150
+      }
+     ],
+     "Lunch": [],
+     "Dinner": [
+      {
+       "name": "X Dine",
+       "lat": 10.01,
+       "lon": 77.01
+      },
+      {
+       "name": "Y Dine"
+      }
+     ]
+    },
+    "accommodation": {
+     "name": "Stay Z",
+     "lat": 10.02,
+     "lon": 77.03,
+     "price_per_night": 2998.5,
+     "maps_url": "https://maps.example/z"
+    },
+    "weather": {
+     "source": "seasonal (same dates last year)",
+     "days": [
+      {
+       "date": "2026-11-01",
+       "condition": "Heavy rain",
+       "rain_pct": 85,
+       "temp": "20.5°C – 25.0°C"
+      }
+     ]
+    },
+    "indoor_mode": true
+   },
+   "budget": null,
+   "itinerary": {
+    "route": "Kochi → Munnar",
+    "transport": {
+     "option": "Cab",
+     "travel_time": "~4h",
+     "approx_fare": "₹3000",
+     "notes": "Door to door",
+     "links": [
+      "https://cab.example",
+      {
+       "title": "Uber",
+       "url": "https://uber.example"
+      }
+     ]
+    },
+    "accommodation": {
+     "name": "Stay Z",
+     "lat": 10.02,
+     "lon": 77.03,
+     "price_per_night": 2998.5,
+     "maps_url": "https://maps.example/z"
+    },
+    "cards": [
+     {
+      "day": 1,
+      "date": "2026-11-01",
+      "note": "Explore museums, art and indoor discoveries including B Museum and D Gallery. Carry an umbrella as heavy rain is expected.",
+      "weather": {
+       "condition": "Heavy rain",
+       "temp": "20.5°C – 25.0°C",
+       "rain_pct": 85
+      },
+      "activities": [
+       {
+        "time": "10:00",
+        "name": "B Museum",
+        "category": "Museum",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "lat": "10.05",
+        "lon": "77.02",
+        "maps_url": null,
+        "dist_to_next_km": null,
+        "price_level": "$$",
+        "est_cost": 450
+       },
+       {
+        "time": "15:30",
+        "name": "D Gallery",
+        "category": "Gallery",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "lat": null,
+        "lon": null,
+        "maps_url": null,
+        "dist_to_next_km": null,
+        "price_level": null,
+        "est_cost": 0
+       }
+      ],
+      "meals": [
+       {
+        "meal": "Breakfast",
+        "time": "08:30",
+        "name": "Only Cafe",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "maps_url": null,
+        "lat": null,
+        "lon": null,
+        "price_level": null,
+        "est_cost": 150
+       },
+       {
+        "meal": "Dinner",
+        "time": "20:00",
+        "name": "X Dine",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "maps_url": null,
+        "lat": 10.01,
+        "lon": 77.01,
+        "price_level": null,
+        "est_cost": 0
+       }
+      ],
+      "from_stay_km": 3.5,
+      "to_stay_km": 2.5,
+      "day_km": 10.6
+     },
+     {
+      "day": 2,
+      "date": "Day 2",
+      "note": "Explore heritage and cultural landmarks including A Temple and C Park.",
+      "weather": {
+       "condition": "unknown",
+       "temp": null,
+       "rain_pct": 0
+      },
+      "activities": [
+       {
+        "time": "10:00",
+        "name": "A Temple",
+        "category": "Temple",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "lat": 10,
+        "lon": 77,
+        "maps_url": null,
+        "dist_to_next_km": 24.8,
+        "price_level": null,
+        "est_cost": 30
+       },
+       {
+        "time": "15:30",
+        "name": "C Park",
+        "category": "Park",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "lat": 10.2,
+        "lon": 77.1,
+        "maps_url": null,
+        "dist_to_next_km": null,
+        "price_level": null,
+        "est_cost": 0
+       }
+      ],
+      "meals": [
+       {
+        "meal": "Breakfast",
+        "time": "08:30",
+        "name": "Only Cafe",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "maps_url": null,
+        "lat": null,
+        "lon": null,
+        "price_level": null,
+        "est_cost": 150
+       },
+       {
+        "meal": "Dinner",
+        "time": "20:00",
+        "name": "Y Dine",
+        "hours": null,
+        "rating": null,
+        "address": null,
+        "maps_url": null,
+        "lat": null,
+        "lon": null,
+        "price_level": null,
+        "est_cost": 0
+       }
+      ],
+      "from_stay_km": 4,
+      "to_stay_km": 21.4,
+      "day_km": 50.2
+     }
+    ],
+    "total_travel_km": 60.8,
+    "weather_source": "seasonal (same dates last year)",
+    "weather_unavailable": false,
+    "indoor_mode": true,
+    "weather_declined": false
+   },
+   "rendered": "  Kochi → Munnar\n  Transport : Cab — ~4h — ₹3000 (Door to door)\n              ↳ Booking : https://cab.example · [Uber](https://uber.example)\n  Weather   : seasonal (same dates last year)\n  Legwork   : ~60.8 km of local travel\n\n┌ Day 1 · 2026-11-01 ───────────────────────────────────────────\n│ Explore museums, art and indoor discoveries including B Museum and D Gallery. Carry an umbrella as heavy rain is expected.\n│ Weather : Heavy rain, 20.5°C – 25.0°C, rain 85%\n│ Stay    : Stay Z  ~₹2998/night\n│         ↳ https://maps.example/z\n├ Plan\n│         ⌂ stay → first stop · 3.5 km\n│\n│  08:30  Breakfast · Only Cafe\n│         Price  : ~₹150/pp\n│\n│  10:00  B Museum\n│         Price  : $$\n│\n│  15:30  D Gallery\n│\n│  20:00  Dinner · X Dine\n│\n│         last stop → ⌂ stay · 2.5 km\n│         day total · 10.6 km\n└───────────────────────────────────────────────────────────────\n\n┌ Day 2 · Day 2 ────────────────────────────────────────────────\n│ Explore heritage and cultural landmarks including A Temple and C Park.\n│ Weather : unknown, rain 0%\n│ Stay    : Stay Z  ~₹2998/night\n│         ↳ https://maps.example/z\n├ Plan\n│         ⌂ stay → first stop · 4.0 km\n│\n│  08:30  Breakfast · Only Cafe\n│         Price  : ~₹150/pp\n│\n│  10:00  A Temple\n│         Price  : ~₹30/pp\n│         → 24.8 km to next stop\n│\n│  15:30  C Park\n│\n│  20:00  Dinner · Y Dine\n│\n│         last stop → ⌂ stay · 21.4 km\n│         day total · 50.2 km\n└───────────────────────────────────────────────────────────────\n"
+  }
+ ]
+}

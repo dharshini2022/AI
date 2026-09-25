@@ -6,6 +6,8 @@ import { z } from "zod";
 import { Agent } from "./agent.ts";
 import { settings } from "./config.ts";
 import type { McpTools } from "./mcpClient.ts";
+import type { Principal } from "./rbac/rbac.ts";
+import type { Scratchpad } from "./scratchpad.ts";
 import { listSpecs, loadSpec } from "./specs.ts";
 import { type Dict, truthy } from "./tools/util.ts";
 import { isValidFutureDate } from "./validation.ts";
@@ -16,8 +18,7 @@ export interface SubagentTask {
   id: string;
   specName: string;
   status: SubagentStatus;
-  task: Dict;
-  tools: Dict; // tool name → latest raw result
+  toolNames: string[]; // the spec's tools; their latest results live in the scratchpad
   reply: Dict | null;
   error: string | null;
   turns: number;
@@ -30,7 +31,7 @@ export interface SubagentTask {
   abort: AbortController | null;
 }
 
-export type ResearchSummary = (tools: Dict) => unknown;
+export type ResearchSummary = (results: Dict) => unknown;
 
 const ICONS: Record<SubagentStatus, string> = {
   running: "[running]",
@@ -40,7 +41,25 @@ const ICONS: Record<SubagentStatus, string> = {
   stopped: "[stopped]",
 };
 
-const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
+// LangGraph reports parallel tool-call failures as one AggregateError-like wrapper ("Multiple errors
+// occurred during superstep N"), which hides which tool(s) actually threw. Unwrap it so the real cause
+// is visible instead of that generic message.
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    const causes = (err as { errors?: unknown[] }).errors;
+    if (Array.isArray(causes) && causes.length) return causes.map((e) => errorMessage(e)).join("; ");
+    return err.message;
+  }
+  return String(err);
+}
+
+// The Main Agent must never be offered, or able, to launch itself as a sub-agent. Its own spec lives outside
+// listSpecs()'s search directory already (see mainAgent.ts), so this is a second, explicit line of defense
+// that doesn't depend on that directory layout staying the way it is.
+
+// main_agent can't spin another main agent. so we don't want to allow it to be launched as a sub-agent.
+const NOT_LAUNCHABLE = new Set(["main_agent"]);
+const launchableSpecs = () => listSpecs().filter((name) => !NOT_LAUNCHABLE.has(name));
 
 async function safely(fn: () => unknown): Promise<unknown> {
   try {
@@ -55,16 +74,23 @@ async function safely(fn: () => unknown): Promise<unknown> {
 export class SpinUp {
   private mcp: McpTools;
   private summarize: ResearchSummary;
+  private principal: Principal;
+  readonly scratchpad: Scratchpad;
   private checkpointer = new MemorySaver();
   private records = new Map<string, SubagentTask>();
   private counters = new Map<string, number>();
 
-  constructor(mcp: McpTools, summarize: ResearchSummary) {
+  constructor(mcp: McpTools, summarize: ResearchSummary, principal: Principal, scratchpad: Scratchpad) {
     this.mcp = mcp;
     this.summarize = summarize;
+    this.principal = principal;
+    this.scratchpad = scratchpad;
   }
 
   launch(specName: string, task: Dict = {}): SubagentTask {
+    if (NOT_LAUNCHABLE.has(specName)) {
+      throw new Error(`'${specName}' is not a sub-agent spec and cannot be launched.`);
+    }
     if (task.start_date && !isValidFutureDate(String(task.start_date))) {
       throw new Error(`Invalid start_date '${task.start_date}': Must be a valid date in YYYY-MM-DD format and cannot be in the past.`);
     }
@@ -72,13 +98,11 @@ export class SpinUp {
     const n = (this.counters.get(specName) ?? 0) + 1;
     this.counters.set(specName, n);
     const id = `${specName}-${n}`;
-    const tools: Dict = {};
     const record: SubagentTask = {
       id,
       specName,
       status: "running",
-      task,
-      tools,
+      toolNames: spec.tools,
       reply: null,
       error: null,
       turns: 0,
@@ -91,9 +115,10 @@ export class SpinUp {
       agent: new Agent(spec, this.mcp, {
         sessionId: id,
         checkpointer: this.checkpointer,
-        onToolResult: (name, result) => {
-          tools[name] = result;
-        },
+        principal: this.principal,
+        onToolResult: (name, result, input) => this.scratchpad.record(name, input, result),
+        guard: (name, input) => this.scratchpad.pin(name, input),
+        facts: () => this.scratchpad.factsBlock(),
       }),
     };
     this.records.set(id, record);
@@ -160,7 +185,7 @@ export class SpinUp {
         description:
           "Start a research sub-agent from its spec file. It runs in the background and this returns a task_id " +
           "immediately; collect its result with wait_for_subagents. " +
-          `Available specs: ${listSpecs().join(", ") || "(none)"}.`,
+          `Available specs: ${launchableSpecs().join(", ") || "(none)"}.`,
         schema: z.object({
           spec_name: z.string().describe("Spec file stem, e.g. 'transportation_agent' or 'place_agent'"),
           task: z.record(z.string(), z.any()).default({}).describe("Input payload passed to the sub-agent"),
@@ -248,8 +273,7 @@ export class SpinUp {
       queued_messages: record.inbox.length,
       question: record.status === "needs_clarification" ? (record.reply?.needs_clarification ?? null) : null,
       error: record.error,
-      //summarised version of 
-      summary: this.summarize(record.tools),
+      summary: this.summarize(this.scratchpad.outputs(record.toolNames)),
       reply: record.reply,
     };
   }

@@ -1,0 +1,105 @@
+{
+  "geo": {
+    "munnar": [10.0889, 77.0595],
+    "bangalore": [12.9716, 77.5946],
+    "goa": [15.2993, 74.124]
+  },
+  "maps_rules": [
+    ["tea valley resort", "maps_detail"],
+    ["hotels resorts stays", "maps_hotels"],
+    ["breakfast", "maps_breakfast"],
+    ["lunch", "maps_lunch"],
+    ["dinner", "maps_dinner"],
+    ["top tourist attractions", "maps_attr_top"],
+    ["museum", "maps_attr_indoor"],
+    ["", "maps_attr_misc"]
+  ],
+  "maps_attr_top": {
+    "knowledge_graph": {"title": "Hidden Waterfall", "type": "Tourist spot · $ ·"},
+    "local_results": [
+      {"title": "Top Station Viewpoint | Munnar Tourism", "type": "Tourist attraction", "types": ["Tourist attraction", "Scenic spot"], "address": "Top Station, Kerala", "rating": 4.6, "reviews": 12850, "gps_coordinates": {"latitude": 10.1256, "longitude": 77.2436}, "hours": {"monday": "6 AM–6 PM", "tuesday": "6 AM–6 PM"}, "data_cid": "1111"},
+      {"title": "Mattupetty Dam", "type": "Dam", "address": "Mattupetty, Munnar", "rating": 4.3, "reviews": 9800, "gps_coordinates": {"latitude": 10.1063, "longitude": 77.1238}, "price": "₹20"},
+      {"title": "Eravikulam National Park", "type": "National park", "types": ["National park"], "address": "Munnar", "rating": 4.5, "reviews": 20500, "gps_coordinates": {"latitude": 10.1929, "longitude": 77.0877}, "knowledge_graph": {"pricing": {"offers": [{"price": "₹200", "link": "https://example.com/erav"}, {"price": "$3", "link": "https://example.com/erav2"}]}}, "hours": "Open  ⋅ Closes 4 PM"},
+      {"title": "Best 5. Tea Museum", "type": "Museum", "address": "KDHP, Munnar", "rating": 4.2, "reviews": 5400, "gps_coordinates": {"latitude": 10.0953, "longitude": 77.059}, "price": "$$"},
+      {"title": "Annachal Spice Restaurant", "type": "Restaurant", "types": ["Restaurant"], "rating": 4.1, "reviews": 800, "gps_coordinates": {"latitude": 10.07, "longitude": 77.06}},
+      {"title": "Old Closed Fort", "type": "Fort", "permanently_closed": true, "rating": 3.5, "reviews": 50},
+      {"title": "Kanyakumari Beach", "type": "Beach", "rating": 4.4, "reviews": 30000, "gps_coordinates": {"latitude": 8.0883, "longitude": 77.5385}},
+      {"title": "Hidden Waterfall", "type": "Waterfall", "rating": 4.8, "reviews": 12},
+      {"title": "mattupetty dam", "type": "Dam", "rating": 4.1, "reviews": 100},
+      {"title": "Photo Point", "type": "Scenic spot", "rating": 4.1, "reviews": 2300, "gps_coordinates": {"latitude": 10.0762, "longitude": 77.0802}, "price": "US$2-4"}
+    ]
+  },
+  "maps_attr_indoor": {
+    "local_results": [
+      {"title": "Tea Museum", "type": "Museum", "types": ["Museum"], "address": "KDHP", "rating": 4.2, "reviews": 5400, "gps_coordinates": {"latitude": 10.0953, "longitude": 77.059}, "operating_hours": {"monday": "9 AM–5 PM", "tuesday": "9 AM–5 PM", "wednesday": "Closed"}},
+      {"title": "Munnar Art Gallery - Official", "type": "Art gallery", "rating": 3.9, "reviews": 150, "gps_coordinates": {"latitude": 10.087, "longitude": 77.061}, "priceLevel": "moderate"}
+    ]
+  },
+  "maps_attr_misc": {
+    "place_results": {"title": "Lockhart Gap Viewpoint", "type": "Viewpoint", "rating": 4.7, "reviews": 800, "gps_coordinates": {"latitude": 10.04, "longitude": 77.13}, "businessStatus": "OPERATIONAL"}
+  },
+  "maps_breakfast": {
+    "local_results": [
+      {"title": "Saravana Bhavan", "type": "South Indian restaurant", "address": "Main Bazaar", "rating": 4.1, "reviews": 2100, "gps_coordinates": {"latitude": 10.089, "longitude": 77.06}, "price": "₹100–200"},
+      {"title": "Rapsy Restaurant", "rating": 4.3, "reviews": 3400, "gps_coordinates": {"latitude": 10.0885, "longitude": 77.0612}, "price": "$"}
+    ]
+  },
+  "maps_lunch": {
+    "local_results": [
+      {"title": "Hotel Sree Krishna", "type": "Vegetarian restaurant", "rating": 4.2, "reviews": 900, "gps_coordinates": {"latitude": 10.0871, "longitude": 77.0588}, "price": "₹600–1,800 for two"},
+      {"title": "Far Away Diner", "rating": 4.5, "reviews": 100, "gps_coordinates": {"latitude": 12.9, "longitude": 77.5}},
+      {"title": "Closed Cafe", "business_status": "CLOSED_TEMPORARILY"}
+    ]
+  },
+  "maps_dinner": {
+    "local_results": [
+      {"title": "Guru's Restaurant", "price": "US$23-31", "rating": 4.4, "reviews": 1500, "gps_coordinates": {"latitude": 10.0902, "longitude": 77.0601}},
+      {"title": "Taste of Munnar", "rating": 4.1, "reviews": 300}
+    ]
+  },
+  "maps_hotels": {
+    "local_results": [
+      {"title": "Tea Valley Resort", "type": "Resort", "rating": 4.3, "gps_coordinates": {"latitude": 10.07, "longitude": 77.05}, "data_cid": "9999"},
+      {"title": "Blanket Hotel", "rating": 4.5, "price": "₹3,500", "link": "https://example.com/blanket", "gps_coordinates": {"latitude": 10.081, "longitude": 77.071}},
+      {"title": "Misty Mountain Resort", "rating": 4.2, "pricing": {"offers": {"Agoda": {"price": "₹2,800", "link": "https://agoda.example/misty"}, "Booking.com": "₹3,100"}}, "gps_coordinates": {"latitude": 10.095, "longitude": 77.045}},
+      {"title": "No Price Homestay", "overall_rating": 3.8, "gps_coordinates": {"latitude": 10.1, "longitude": 77.07}},
+      {"title": "Far Resort", "rating": 4.6, "gps_coordinates": {"latitude": 15.3, "longitude": 74.12}}
+    ]
+  },
+  "maps_detail": {
+    "knowledge_graph": {"title": "Tea Valley Resort", "pricing": {"offers": [{"source": "MakeMyTrip", "price": "₹4,200", "link": "https://mmt.example/tv"}, {"source": "Goibibo", "price": "₹3,900", "link": "https://goibibo.example/tv"}]}}
+  },
+  "hotels": {
+    "properties": [
+      {"name": "Munnar Tea Hills Resort", "rate_per_night": {"lowest": "₹5,200", "extracted_lowest": 5200}, "overall_rating": 4.4, "gps_coordinates": {"latitude": 10.085, "longitude": 77.065}, "link": "https://hotels.example/teahills"},
+      {"name": "Budget Inn | Munnar", "prices": [{"source": "Agoda", "rate_per_night": {"lowest": "$45"}, "link": "https://agoda.example/budget"}, {"source": "Booking", "rate_per_night": {"lowest": "₹3,400"}}], "overall_rating": 3.9, "gps_coordinates": {"latitude": 10.092, "longitude": 77.058}},
+      {"name": "Mystery Lodge", "overall_rating": 4.1},
+      {"name": "Far Lodge", "rate_per_night": {"extracted_lowest": 2000}, "gps_coordinates": {"latitude": 15.1, "longitude": 74.1}}
+    ]
+  },
+  "organic": {
+    "organic_results": [
+      {"title": "Bangalore to Munnar bus", "link": "https://redbus.example/blr-munnar", "snippet": "Book buses"},
+      {"title": "No link"},
+      {"title": "Trains", "link": "https://ixigo.example/t"}
+    ]
+  },
+  "forecast": {
+    "daily": {
+      "time": ["2026-10-02", "2026-10-03", "2026-10-04"],
+      "weather_code": [63, 2, 95],
+      "precipitation_probability_max": [80, 10, 65],
+      "temperature_2m_max": [21.5, 23.1, 20.0],
+      "temperature_2m_min": [14.2, 15.0, 13.8]
+    }
+  },
+  "archive": {
+    "daily": {
+      "time": ["2025-10-02", "2025-10-03"],
+      "weather_code": [61, null],
+      "precipitation_hours": [12.5, 30],
+      "temperature_2m_max": [31.2, 30.4],
+      "temperature_2m_min": [24.1]
+    }
+  }
+}

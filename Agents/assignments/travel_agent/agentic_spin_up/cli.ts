@@ -1,6 +1,6 @@
 import { Hitl } from "./travel_agent/hitl.ts";
 import { planTrip } from "./travel_agent/mainAgent.ts";
-import { type Role, resolvePrincipal } from "./travel_agent/rbac.ts";
+import { type Role, resolvePrincipal } from "./travel_agent/rbac/rbac.ts";
 import { StdinChannel } from "./travel_agent/stdin.ts";
 
 const rawArgs = process.argv.slice(2);

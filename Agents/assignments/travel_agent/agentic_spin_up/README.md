@@ -20,7 +20,7 @@ There is **no hardcoded `StateGraph`**. Instead, agents are instantiated at runt
 
 2. **Dynamic Agent Provisioning (`travel_agent/spinUp.ts` & `travel_agent/agent_specs/*.md`)**
    - Sub-agents (`transportation_agent`, `place_agent`) are defined declaratively in Markdown files with YAML frontmatter (`name`, `description`, `tools`, `output` schema).
-   - The Main Agent launches sub-agents with `launch_subagent`. Each runs in the background with its own session (memory) and status. `wait_for_subagents`, `check_subagent_status`, `send_message_to_subagent` and `stop_subagent` collect results, answer questions, add comments or cancel work (see [`concepts/subagent-lifecycle.md`](concepts/subagent-lifecycle.md)).
+   - The Main Agent launches sub-agents with `launch_subagent`. Each runs in the background with its own session (memory) and status. `wait_for_subagents`, `check_subagent_status`, `send_message_to_subagent` and `stop_subagent` collect results, answer questions, add comments or cancel work (see [`concepts/architecture/subagent-lifecycle.md`](concepts/architecture/subagent-lifecycle.md)).
    - Each sub-agent's raw tool results are recorded in code, so sub-agents reply only `{"done": true}` and the Main Agent receives a compact summary.
 
 3. **MCP Adapter Layer (`McpTools.langchainTools` in `travel_agent/mcpClient.ts`)**
@@ -44,7 +44,11 @@ When the assembled plan is over the user's budget:
 2. **The place agent** decides where to cut and re-calls its tools with `max_price_per_night` / `max_cost_per_person`.
 3. **If it still doesn't fit**, the user can keep the plan, switch to a cheaper transport, or raise the budget.
 
-Details and latency changes: [`concepts/budget-recheck.md`](concepts/budget-recheck.md). Set `TRIP_TIMING=1` to print per-LLM-call, per-tool and per-HTTP timings.
+Details and latency changes: [`concepts/money/budget-recheck.md`](concepts/money/budget-recheck.md). Set `TRIP_TIMING=1` to print per-LLM-call, per-tool and per-HTTP timings.
+
+## ✉️ Booking email
+
+When an admin books (`npm start -- --admin "<trip>"`), the terminal asks for an email address and sends the booking details for both legs, with a `.ics` calendar file attached so the traveller can add the trip to their own calendar. Set `MAIL_USER` and `APP_PASSWORD` in `.env` to turn it on; without them nothing is asked. See [`concepts/features/booking-email.md`](concepts/features/booking-email.md).
 
 ---
 
@@ -55,10 +59,8 @@ Requires Node 26+.
 ```bash
 cd agentic_spin_up
 npm install
-cp .env.example .env            # set LLM_MODEL / LLM_API_KEY / LLM_API_BASE (or rely on ../langgraph2/.env)
+cp .env.example .env            # set LLM_MODEL / LLM_API_KEY / LLM_API_BASE
 ```
-
-Tool API keys (e.g. `SERP_API_KEY`) fall back to `../langgraph2/.env` when not set here.
 
 ---
 
@@ -84,7 +86,10 @@ npm run typecheck   # tsc --noEmit
 - `tests/mcpServer.test.ts`: Tests MCP server startup, tool listing, and parallel tool calls over stdio.
 - `tests/smoke.test.ts`: Tests the full happy path with a scripted LLM.
 - `tests/budgetRecheck.test.ts`: Tests the budget re-check loop, the ask-user fallback and `choose_transport` offline, with MCP tools run in-process.
-- `tests/toolBehaviour.test.ts`: Tests concurrent SerpAPI calls inside tools and the budget limit inputs.
+- `tests/toolBehaviour.test.ts`: Tests concurrent searches inside tools, the budget limit inputs, and that `transport_search` makes no search call.
+- `tests/providers.test.ts`: Tests the provider chain, the quota circuit breaker, the Serper request, the disk cache, and that the tools' output schemas do not change.
+- `tests/estimates.test.ts`: Tests the `estimated` flags, hotel star-class rates and the class lookup, the route fare table, transport feasibility, the return leg in the budget, and how estimates reach the plan.
+- `tests/httpFailures.test.ts`: Tests that a failed request reports why (quota, rate limit, refused key, timeout, network, server, rejected).
 - `tests/subagents.test.ts`: Tests the sub-agent lifecycle: background launch, waiting, sessions, questions, queued comments, stopping and failures.
 
 ---

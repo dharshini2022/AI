@@ -1,3 +1,4 @@
+import { settings } from "../config.ts";
 import { type Dict, fmtFixed, get, isDict, numStr, pyOr, pyRound, pyStr, pyTitle, truthy } from "./util.ts";
 
 type Point = [number, number];
@@ -49,8 +50,61 @@ function dedupePlaces(items: Dict[]): Dict[] {
   });
 }
 
+const placeKey = (p: Dict) => pyStr(p.name ?? "").toLowerCase().trim();
+
+// The closest point to `from` among a day's own places, or `fallback` (the stay) when it has none yet —
+// so a day that lost every place anchors on the accommodation, exactly like the very first build does.
+function nearestAnchor(dayList: Dict[], fallback: Point | null): Point | null {
+  const coords = dayList.map(xy).filter((p): p is Point => p !== null);
+  return coords.length ? coords[coords.length - 1] : fallback;
+}
+
+// Places still present after an edit keep the day they were already on; only the delta (removed slots,
+// newly-ranked replacements) gets placed, nearest to whatever's already anchored on that day — its own
+// remaining places, or the accommodation for a day that lost all of them. This is what keeps an edit from
+// reshuffling days the user never touched, and it's why a replacement naturally lands near its neighbours
+// (or near the stay, for a first/last stop) without any hardcoded distance rule.
+function clusterByPreviousLayout(
+  places: Dict[], accommodation: Dict, numDays: number, perDay: number, previousLayout: Map<string, number>,
+): Dict[][] {
+  const daysPlaces: Dict[][] = Array.from({ length: numDays }, () => []);
+  const fresh: Dict[] = [];
+  for (const p of places) {
+    const day = previousLayout.get(placeKey(p));
+    if (day != null && day < numDays && daysPlaces[day].length < perDay) daysPlaces[day].push(p);
+    else fresh.push(p);
+  }
+
+  const stayCoord = xy(accommodation);
+  const remaining = [...fresh];
+  while (remaining.length) {
+    const target = daysPlaces.reduce((min, day) => (day.length < min.length ? day : min));
+    if (target.length >= perDay) {
+      // Every day is at (or over) capacity from kept places alone — the rest have nowhere reasonable to go.
+      if (daysPlaces.every((d) => d.length >= perDay)) break;
+      continue;
+    }
+    const anchor = nearestAnchor(target, stayCoord);
+    let best = 0;
+    let bestKm = anchor && xy(remaining[0]) ? haversineKm(anchor, xy(remaining[0])!) : 0;
+    if (anchor) {
+      for (let k = 1; k < remaining.length; k++) {
+        const p = xy(remaining[k]);
+        const km = p ? haversineKm(anchor, p) : Infinity;
+        if (km < bestKm) [best, bestKm] = [k, km];
+      }
+    }
+    const [next] = remaining.splice(best, 1);
+    target.push(next);
+  }
+  return daysPlaces;
+}
+
 // Nearest-neighbour tour from the stay, split into day buckets; rainy days get indoor stops first.
-function clusterPlaces(places: Dict[], accommodation: Dict, numDays: number, weatherDays: Dict[]): Dict[] {
+function clusterPlaces(
+  places: Dict[], accommodation: Dict, numDays: number, weatherDays: Dict[],
+  previousLayout: Map<string, number> | null = null,
+): Dict[] {
   numDays = Math.max(1, numDays);
   places = dedupePlaces(places);
   if (!places.length) {
@@ -62,45 +116,50 @@ function clusterPlaces(places: Dict[], accommodation: Dict, numDays: number, wea
     .slice(0, numDays)
     .flatMap((w, i) => ((get(w, "rain_pct") || 0) >= 60 ? [i] : []));
 
-  const coded = places.filter((p) => xy(p));
-  const uncoded = places.filter((p) => !xy(p));
+  const perDay = Math.max(2, Math.min(4, Math.max(1, pyRound(places.length / numDays))));
 
-  let ordered: Dict[];
-  if (coded.length) {
-    let cur = stayCoord ?? xy(coded[0])!;
-    const remaining = [...coded];
-    ordered = [];
-    while (remaining.length) {
-      let best = 0;
-      let bestKm = haversineKm(cur, xy(remaining[0])!);
-      for (let k = 1; k < remaining.length; k++) {
-        const km = haversineKm(cur, xy(remaining[k])!);
-        if (km < bestKm) [best, bestKm] = [k, km];
-      }
-      const [next] = remaining.splice(best, 1);
-      ordered.push(next);
-      cur = xy(next)!;
-    }
-    ordered.push(...uncoded);
+  let daysPlaces: Dict[][];
+  if (previousLayout) {
+    daysPlaces = clusterByPreviousLayout(places, accommodation, numDays, perDay, previousLayout);
   } else {
-    ordered = [...places];
-  }
+    const coded = places.filter((p) => xy(p));
+    const uncoded = places.filter((p) => !xy(p));
 
-  const perDay = Math.max(2, Math.min(4, Math.max(1, pyRound(ordered.length / numDays))));
-  const daysPlaces: Dict[][] = Array.from({ length: numDays }, () => []);
-
-  const indoor = ordered.filter((p) => truthy(p.indoor));
-  const outdoor = ordered.filter((p) => !truthy(p.indoor));
-
-  if (rainyDays.length && indoor.length) {
-    for (const d of rainyDays) {
-      while (indoor.length && daysPlaces[d].length < perDay) daysPlaces[d].push(indoor.shift()!);
+    let ordered: Dict[];
+    if (coded.length) {
+      let cur = stayCoord ?? xy(coded[0])!;
+      const remaining = [...coded];
+      ordered = [];
+      while (remaining.length) {
+        let best = 0;
+        let bestKm = haversineKm(cur, xy(remaining[0])!);
+        for (let k = 1; k < remaining.length; k++) {
+          const km = haversineKm(cur, xy(remaining[k])!);
+          if (km < bestKm) [best, bestKm] = [k, km];
+        }
+        const [next] = remaining.splice(best, 1);
+        ordered.push(next);
+        cur = xy(next)!;
+      }
+      ordered.push(...uncoded);
+    } else {
+      ordered = [...places];
     }
-  }
 
-  for (const p of [...indoor, ...outdoor]) {
-    const target = daysPlaces.reduce((min, day) => (day.length < min.length ? day : min));
-    if (target.length < perDay) target.push(p);
+    daysPlaces = Array.from({ length: numDays }, () => []);
+    const indoor = ordered.filter((p) => truthy(p.indoor));
+    const outdoor = ordered.filter((p) => !truthy(p.indoor));
+
+    if (rainyDays.length && indoor.length) {
+      for (const d of rainyDays) {
+        while (indoor.length && daysPlaces[d].length < perDay) daysPlaces[d].push(indoor.shift()!);
+      }
+    }
+
+    for (const p of [...indoor, ...outdoor]) {
+      const target = daysPlaces.reduce((min, day) => (day.length < min.length ? day : min));
+      if (target.length < perDay) target.push(p);
+    }
   }
 
   return daysPlaces.map((dayList, i) => {
@@ -139,6 +198,15 @@ function dayNote(places: Dict[], weather: Dict | null): string {
   return lead;
 }
 
+// The estimate flag travels with a venue so the budget check can total what is a guess.
+const estimatedFlag = (venue: Dict): Dict => (venue.estimated === undefined ? {} : { estimated: venue.estimated });
+
+// A fare shown with "~" when it is a guess, so it never reads as a real quote.
+export function fareText(transport: Dict): string {
+  const fare = truthy(transport.approx_fare) ? pyStr(transport.approx_fare) : `₹${fmtFixed(get(transport, "price", 0), 0)}`;
+  return transport.estimated === true ? `~${fare}` : fare;
+}
+
 function buildDayCards(layoutDays: Dict[], forecast: Dict, restaurants: unknown, accommodation: Dict): Dict[] {
   const fdays: Dict[] = get(forecast, "days", []);
   const stay = xy(accommodation);
@@ -148,6 +216,20 @@ function buildDayCards(layoutDays: Dict[], forecast: Dict, restaurants: unknown,
   return layoutDays.map((d, i) => {
     const places: Dict[] = get(d, "places", []);
     const times = slots(places.length);
+    // The day's own centroid, so a meal pick can prefer whichever candidate is actually nearby — null
+    // when nothing has coordinates, in which case picking stays exactly as it was (first match in tier).
+    const dayCoords = places.map(xy).filter((p): p is Point => p !== null);
+    const centroid: Point | null = dayCoords.length
+      ? [dayCoords.reduce((s, p) => s + p[0], 0) / dayCoords.length, dayCoords.reduce((s, p) => s + p[1], 0) / dayCoords.length]
+      : null;
+    // Nearest to the day's centroid among a tier's matches; unchanged (first match) when there's no centroid
+    // or no candidate has coordinates, so this only ever breaks a tie, never overrides the tier priority.
+    const nearest = (matches: Dict[]): Dict | undefined => {
+      if (!centroid) return matches[0];
+      const withCoords = matches.filter((m) => xy(m));
+      if (!withCoords.length) return matches[0];
+      return withCoords.reduce((best, m) => (haversineKm(centroid, xy(m)!) < haversineKm(centroid, xy(best)!) ? m : best));
+    };
 
     places.forEach((p) => {
       const key = pyStr(p.name ?? "").toLowerCase().trim();
@@ -167,6 +249,7 @@ function buildDayCards(layoutDays: Dict[], forecast: Dict, restaurants: unknown,
       dist_to_next_km: get(p, "dist_to_next_km"),
       price_level: get(p, "price_level"),
       est_cost: get(p, "est_cost", 0),
+      ...estimatedFlag(p),
     }));
 
     const meals: Dict[] = [];
@@ -174,41 +257,38 @@ function buildDayCards(layoutDays: Dict[], forecast: Dict, restaurants: unknown,
     for (const meal of ["Breakfast", "Lunch", "Dinner"] as const) {
       const options: Dict[] = isDict(restaurants) ? get(restaurants, meal, []) : [];
       if (!truthy(options)) continue;
-      // Prefer an option not used anywhere in the trip or as an attraction
-      let r = options.find((opt) => {
+      // Prefer an option not used anywhere in the trip or as an attraction — among that tier's matches,
+      // the one nearest to today's places wins (see `nearest` above); the priority itself is unchanged.
+      let r = nearest(options.filter((opt) => {
         const key = pyStr(opt.name ?? "").toLowerCase().trim();
         return !usedTripRestaurants.has(key) && !usedTripPlaces.has(key);
-      });
+      }));
       // Fallback: an option not used in the trip so far
       if (!r) {
-        r = options.find((opt) => !usedTripRestaurants.has(pyStr(opt.name ?? "").toLowerCase().trim()));
+        r = nearest(options.filter((opt) => !usedTripRestaurants.has(pyStr(opt.name ?? "").toLowerCase().trim())));
       }
       // Fallback: an option not used today
       if (!r) {
-        for (let k = 0; k < options.length; k++) {
-          const candidate = options[(i + k) % options.length];
-          if (!usedToday.has(candidate.name)) {
-            r = candidate;
-            break;
-          }
-        }
+        r = nearest(options.filter((opt) => !usedToday.has(opt.name)));
       }
-      r = r ?? options[i % options.length];
-      const normName = pyStr(r.name ?? "").toLowerCase().trim();
-      usedToday.add(r.name);
+      r = r ?? nearest(options); // `options` is non-empty here (checked above), so `nearest` always returns one
+      const picked = r!;
+      const normName = pyStr(picked.name ?? "").toLowerCase().trim();
+      usedToday.add(picked.name);
       if (normName) usedTripRestaurants.add(normName);
       meals.push({
         meal,
         time: MEAL_TIMES[meal],
-        name: r.name,
-        hours: get(r, "hours"),
-        rating: get(r, "rating"),
-        address: get(r, "address"),
-        maps_url: get(r, "maps_url"),
-        lat: get(r, "lat"),
-        lon: get(r, "lon"),
-        price_level: get(r, "price_level"),
-        est_cost: get(r, "est_cost", 0),
+        name: picked.name,
+        hours: get(picked, "hours"),
+        rating: get(picked, "rating"),
+        address: get(picked, "address"),
+        maps_url: get(picked, "maps_url"),
+        lat: get(picked, "lat"),
+        lon: get(picked, "lon"),
+        price_level: get(picked, "price_level"),
+        est_cost: get(picked, "est_cost", 0),
+        ...estimatedFlag(picked),
       });
     }
 
@@ -225,11 +305,18 @@ function buildDayCards(layoutDays: Dict[], forecast: Dict, restaurants: unknown,
       dayKm = pyRound(fromStay + hops + toStay, 1);
     }
 
+    // Surfaced for the user to act on — never a trigger for code to change the accommodation or this day's
+    // places itself; see concepts/architecture/itinerary-layout.md.
+    const farKm = Math.max(fromStay ?? 0, toStay ?? 0);
+    const farNote = (fromStay != null && fromStay > settings.farFromStayKm) || (toStay != null && toStay > settings.farFromStayKm)
+      ? ` This day's places are far from your stay (~${numStr(pyRound(farKm, 1))} km) — consider a different day grouping or accommodation.`
+      : "";
+
     const w = i < fdays.length ? fdays[i] : {};
     return {
       day: i + 1,
       date: pyOr(get(w, "date"), get(d, "date"), `Day ${i + 1}`),
-      note: get(d, "note"),
+      note: farNote ? get(d, "note") + farNote : get(d, "note"),
       weather: {
         condition: get(w, "condition", "unknown"),
         temp: get(w, "temp"),
@@ -244,14 +331,29 @@ function buildDayCards(layoutDays: Dict[], forecast: Dict, restaurants: unknown,
   });
 }
 
-export function buildItinerary(requirements: Dict, flightsResult: Dict, placesResult: Dict): Dict {
+// The day each place was on last time, keyed by name — null when there's no previous itinerary (the first
+// build), so clusterPlaces falls back to its original single global tour.
+function previousLayoutOf(previousItinerary: Dict | null): Map<string, number> | null {
+  if (!previousItinerary) return null;
+  const cards: Dict[] = get(previousItinerary, "cards", []);
+  const layout = new Map<string, number>();
+  cards.forEach((card, day) => {
+    for (const a of get(card, "activities", []) as Dict[]) {
+      const key = pyStr(a.name ?? "").toLowerCase().trim();
+      if (key) layout.set(key, day);
+    }
+  });
+  return layout.size ? layout : null;
+}
+
+export function buildItinerary(requirements: Dict, flightsResult: Dict, placesResult: Dict, previousItinerary: Dict | null = null): Dict {
   const numDays = pyOr(get(requirements, "num_days"), 2);
   const weather = pyOr(get(placesResult, "weather"), {});
   const accommodation = pyOr(get(placesResult, "accommodation"), {});
   const places = pyOr(get(placesResult, "places"), []);
   const restaurants = pyOr(get(placesResult, "restaurants"), {});
 
-  const layoutDays = clusterPlaces(places, accommodation, numDays, get(weather, "days", []));
+  const layoutDays = clusterPlaces(places, accommodation, numDays, get(weather, "days", []), previousLayoutOf(previousItinerary));
   const cards = buildDayCards(layoutDays, weather, restaurants, accommodation);
 
   const dayTotals = cards.map((c) => c.day_km).filter((km) => km != null);
@@ -260,6 +362,10 @@ export function buildItinerary(requirements: Dict, flightsResult: Dict, placesRe
   return {
     route: `${pyStr(get(requirements, "source"))} → ${pyStr(get(requirements, "destination"))}`,
     transport: get(flightsResult, "selected", {}),
+    ...(truthy(get(flightsResult, "selected_return")) && {
+      return_transport: flightsResult.selected_return,
+      return_date: get(flightsResult, "return_date"),
+    }),
     accommodation,
     cards,
     total_travel_km: totalTravelKm,
@@ -298,23 +404,28 @@ export interface BudgetRecheck {
   to: number;
 }
 
+// One leg's lines: its title, duration and fare, then its booking links.
+function transportLines(label: string, t: Dict, when = ""): string[] {
+  const title = truthy(t.option) ? t.option : `${pyTitle(pyStr(get(t, "mode", "")))} via ${pyStr(get(t, "provider", ""))}`;
+  const dur = truthy(t.travel_time) ? t.travel_time : `${numStr(get(t, "duration_hours", "?"))}h`;
+  const note = truthy(t.notes) ? ` (${pyStr(t.notes)})` : "";
+  const lines = [`  ${label} : ${pyStr(title)} — ${pyStr(dur)} — ${fareText(t)}${note}${when}`];
+  const links = pyOr(t.links, []);
+  if (truthy(links)) {
+    const linkStrs = (links as unknown[]).map((l) => (isDict(l) ? `[${pyStr(l.title)}](${pyStr(l.url)})` : pyStr(l)));
+    lines.push(`              ↳ Booking : ${linkStrs.join(" · ")}`);
+  } else if (truthy(t.booking_url)) {
+    lines.push(`              ↳ Booking : ${pyStr(t.booking_url)}`);
+  }
+  return lines;
+}
+
 export function renderCards(itinerary: Dict, budget: Dict | null = null, recheck: BudgetRecheck | null = null): string {
   const out: string[] = [`  ${pyStr(get(itinerary, "route", ""))}`];
   const t = get(itinerary, "transport", {});
-  if (truthy(t)) {
-    const title = truthy(t.option) ? t.option : `${pyTitle(pyStr(get(t, "mode", "")))} via ${pyStr(get(t, "provider", ""))}`;
-    const dur = truthy(t.travel_time) ? t.travel_time : `${numStr(get(t, "duration_hours", "?"))}h`;
-    const fare = truthy(t.approx_fare) ? t.approx_fare : `₹${fmtFixed(get(t, "price", 0), 0)}`;
-    const note = truthy(t.notes) ? ` (${pyStr(t.notes)})` : "";
-    out.push(`  Transport : ${pyStr(title)} — ${pyStr(dur)} — ${pyStr(fare)}${note}`);
-    const links = pyOr(t.links, []);
-    if (truthy(links)) {
-      const linkStrs = (links as unknown[]).map((l) => (isDict(l) ? `[${pyStr(l.title)}](${pyStr(l.url)})` : pyStr(l)));
-      out.push(`              ↳ Booking : ${linkStrs.join(" · ")}`);
-    } else if (truthy(t.booking_url)) {
-      out.push(`              ↳ Booking : ${pyStr(t.booking_url)}`);
-    }
-  }
+  const back = get(itinerary, "return_transport", null);
+  if (truthy(t)) out.push(...transportLines(truthy(back) ? "Outbound " : "Transport", t));
+  if (truthy(back)) out.push(...transportLines("Return   ", back, truthy(itinerary.return_date) ? `  on ${pyStr(itinerary.return_date)}` : ""));
 
   const a = get(itinerary, "accommodation", {});
   const src = get(itinerary, "weather_source");
@@ -374,9 +485,12 @@ export function renderCards(itinerary: Dict, budget: Dict | null = null, recheck
     const bd = budget.breakdown;
     out.push(`  Budget    : ₹${fmtFixed(budget.total, 0)}${cap}  (${verdict})`);
     out.push(
-      `              transport ₹${fmtFixed(bd.transport, 0)} · lodging ₹${fmtFixed(bd.lodging, 0)} · ` +
+      `              transport ₹${fmtFixed(bd.transport, 0)}${budget.transport_legs > 1 ? " (return included)" : ""} · lodging ₹${fmtFixed(bd.lodging, 0)} · ` +
         `food ₹${fmtFixed(bd.food, 0)} · activities ₹${fmtFixed(bd.activities, 0)}`,
     );
+    if (truthy(budget.estimated_total)) {
+      out.push(`              about ₹${fmtFixed(budget.estimated_total, 0)} of this is an estimate (shown with ~)`);
+    }
     if (recheck?.attempts) {
       out.push(`              Budget re-checked ${recheck.attempts}× (₹${fmtFixed(recheck.from, 0)} → ₹${fmtFixed(recheck.to, 0)})`);
     }

@@ -1,0 +1,6 @@
+{
+  "_note": "Real typical fares go in \"routes\". Each fare is per person, one way, in INR. A route can list any of standard_bus, ac_bus, premium_bus, train, flight; a mode it leaves out falls back to the distance formula and is shown as an estimate (~). Set \"estimated\": true on a fare you are not sure of. A route matches in both directions. \"aliases\" maps one spelling of a city to another. \"no_railhead\" lists places with no railway station, so the train option is not offered to or from them.",
+  "aliases": {},
+  "no_railhead": ["munnar", "kodaikanal", "thekkady", "wayanad", "coorg", "madikeri", "manali", "gangtok", "leh"],
+  "routes": []
+}

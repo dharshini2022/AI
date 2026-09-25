@@ -1,0 +1,25 @@
+{
+  "_note": "Nightly rates in INR, used only when a stay has no listed price. The rate comes from the hotel's star class (not its guest review score). The 1 to 5 star rates are yours. \"unclassified\" is still a PLACEHOLDER: it is the rate for a hotel whose class is unknown after the lookup, so replace it with your own number. Serper does not return a class, so it is read from the listing's text when it states one (for example '5 Star' in the name), from the kind of stay via \"kinds\", and then from one web search. Every stay priced from here is shown as an estimate (~). Add a city under \"cities\" to override the default rates for it.",
+  "default": {
+    "stars": {
+      "1": 1000,
+      "2": 2000,
+      "3": 3000,
+      "4": 4000,
+      "5": 5000
+    },
+    "unclassified": 3500
+  },
+  "kinds": {
+    "homestay": 1,
+    "cottage": 1,
+    "guest house": 1,
+    "hostel": 1,
+    "lodge": 2,
+    "inn": 2,
+    "motel": 2,
+    "serviced accommodation": 2,
+    "budget hotel": 2
+  },
+  "cities": {}
+}
