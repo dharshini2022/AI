@@ -14,7 +14,7 @@ There is **no hardcoded `StateGraph`**. Instead, agents are instantiated at runt
 
 1. **User (HITL) ➔ Main Agent (`travel_agent/mainAgent.ts`)**
    - The Main Agent owns **all interaction** with the user.
-   - Human-in-the-Loop (HITL) is exposed as LangChain.js tools (`ask_user`, `choose_transport`, `ask_yes_no`) backed by `travel_agent/hitl.ts`. `choose_transport` shows every transport option with an estimated trip total.
+   - Human-in-the-Loop (HITL) is exposed as LangChain.js tools (`ask_user`, `choose_transport`, `ask_yes_no`) backed by `travel_agent/hitl.ts`. `choose_transport` shows every transport option by fare and travel time only; the trip total only exists once, after the plan is assembled.
    - After the agent loop, code assembles the plan and re-checks the budget with the place agent when it's over (see [Budget re-check](#-budget-re-check)).
    - Sub-agents are purely research specialists and never interact with the user directly.
 
@@ -39,10 +39,19 @@ There is **no hardcoded `StateGraph`**. Instead, agents are instantiated at runt
 
 ## 💰 Budget re-check
 
-When the assembled plan is over the user's budget:
-1. **Code** continues the place agent's session with `budget_feedback` (cap, overage, breakdown, current choices), up to `BUDGET_RETRY_LIMIT` times (default 2). It stops early if an attempt doesn't lower the total.
-2. **The place agent** decides where to cut and re-calls its tools with `max_price_per_night` / `max_cost_per_person`.
-3. **If it still doesn't fit**, the user can keep the plan, switch to a cheaper transport, or raise the budget.
+When the assembled plan is over the user's budget, a 4-way menu shows itself — on the first over-budget plan,
+and again whenever the user asks to recheck the budget — with no automatic cut before it:
+1. **Change a place / restaurant** or **switch accommodation** — code continues the place agent's session with
+   `budget_feedback` (cap, overage, breakdown, current choices, and which of these two the user picked), up to
+   `BUDGET_RETRY_LIMIT` times (default 2). The place agent decides what to cut, then proposes each specific
+   swap for the user's approval — nothing is applied until they say yes (see
+   [Human-in-the-loop](concepts/features/human-in-the-loop.md)).
+2. **Switch to a cheaper transport** — the user re-picks from the researched options; the change is shown as a
+   before/after box and needs a yes before it applies, with up to 3 tries.
+3. **Proceed anyway** — keeps the plan as it is.
+
+A lever that produces no saving is dropped from the menu, so repeat visits stay bounded even on a genuinely
+unaffordable trip.
 
 Details and latency changes: [`concepts/money/budget-recheck.md`](concepts/money/budget-recheck.md). Set `TRIP_TIMING=1` to print per-LLM-call, per-tool and per-HTTP timings.
 

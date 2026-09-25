@@ -30,6 +30,22 @@ function withinRadius(v: Dict, center: LatLon, maxKm = 80): boolean {
   return haversineKm(center as [number, number], [v.lat, v.lon]) <= maxKm;
 }
 
+// True only when a candidate is within maxKm of every one of the given centres — used to keep a "cheaper
+// stay" proposal from landing somewhere far from any day's planned places (see current_implementation.md
+// step 5). A candidate with no coordinates, or an empty centre list, always passes (nothing to check against).
+function withinAllCenters(v: Dict, centers: LatLon[], maxKm: number): boolean {
+  if (!centers.length || v.lat == null || v.lon == null) return true;
+  return centers.every((c) => (c[0] === null || c[1] === null) || haversineKm(c as [number, number], [v.lat, v.lon]) <= maxKm);
+}
+
+// Keeps only accommodation candidates within maxKm of every given day-centre. Applied by the
+// accommodation_search handler when the "cheaper stay" budget lever passes the trip's day centres, so a
+// cheaper option never lands somewhere the itinerary can't reach — see current_implementation.md step 5.
+// An empty centre list is a no-op (the normal, non-radius-scoped search).
+export function filterByProximity(options: Dict[], centers: LatLon[], maxKm: number): Dict[] {
+  return centers.length ? options.filter((o) => withinAllCenters(o, centers, maxKm)) : options;
+}
+
 function attractionCost(name: string, types: string[]): number {
   const blob = [name || "", ...types].join(" ").toLowerCase();
   for (const [keywords, cost] of ATTRACTION_COST) {

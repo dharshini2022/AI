@@ -142,9 +142,16 @@ dropped **before** dedupe and the pool size cap, so the pool refills from what i
 is by name, category and types (snake_case such as `hindu_temple` counts), and a plural term also matches its
 singular. It is a filter, not a search instruction, so it works even if the search text returns temples anyway.
 
-**The transport-total cache knows about new research.** `choose_transport` stores the scratchpad `version` with the
-cached preview; `buildPlan` reuses it only if no result has been recorded since. This replaced the old
-`chosen.cache = null` reset in the edit branch.
+**There is no transport-total cache any more.** `choose_transport` no longer assembles a preview per option to
+cache — it only records which option was picked (`concepts/money/transport-legs.md`'s "Why the per-option
+total is gone"). `buildPlan` is the one place that calls `assemble()`, always fresh.
+
+**A search result can be a draft, not a write.** `Scratchpad.setStaging(true)` redirects a
+`places_search`/`restaurants_search`/`accommodation_search` result to a separate draft
+(`stagedOutput`/`commitStaged`/`discardStaged`) instead of the live `results` map `record()` normally writes
+to. This is what makes a budget re-check or a user's edit request safe to show for approval before it takes
+effect — see `concepts/features/human-in-the-loop.md`'s "draft → propose → approve flow" and
+`concepts/money/budget-recheck.md`.
 
 ## Before and after
 

@@ -37,15 +37,43 @@ const script = vi.hoisted(() => {
 
         if (systemPrompt.includes("destination research specialist")) {
           if (message.budget_feedback) {
-            state.feedback.push(message.budget_feedback);
+            const fb = message.budget_feedback;
+            state.feedback.push(fb);
             state.historyAtRecheck.push(history.length);
             if (state.askOnRecheck) return reply({ done: false, needs_clarification: "Cut food or stays?" });
+
+            if (fb.lever === "accommodation") {
+              // The "LLM" tries a cheaper stay within reach of the day centres it was given.
+              const search = await byName.accommodation_search.invoke({
+                destination: task.destination, travellers: task.travellers, start_date: task.start_date, nights: task.num_days - 1,
+                max_price_per_night: Math.max(0, fb.current_choices.accommodation.price_per_night - 1),
+                near: fb.day_centers,
+              });
+              const [cheapest] = search.accommodation_options ?? [];
+              if (search.no_candidates_in_radius || !cheapest || cheapest.name === fb.current_choices.accommodation.name) {
+                return reply({ done: true, notes: "No cheaper stay found." });
+              }
+              await byName.propose_change.invoke({ kind: "accommodation", replace: fb.current_choices.accommodation.name, with: cheapest.name });
+              return reply({ done: true });
+            }
+
+            // lever "places" or the unscoped "any": the "LLM" decides where to cut — cheaper meals only.
+            // Only the currently most expensive meal is a candidate, so a repeat visit that finds nothing
+            // cheaper than what's already live converges instead of proposing the same swap forever.
+            const priciest = fb.current_choices.meals.reduce((a: any, b: any) => (b.est_cost > a.est_cost ? b : a));
+            const search = await byName.restaurants_search.invoke({ destination: task.destination, interests: [], max_cost_per_person: priciest.est_cost - 1 });
+            const cheaperMeal = (["Breakfast", "Lunch", "Dinner"] as const).flatMap((m) => search[m] ?? []).find((r: any) => r.name !== priciest.name);
+            if (!cheaperMeal) return reply({ done: true, notes: "No cheaper meal found." });
+            await byName.propose_change.invoke({ kind: "restaurant", replace: priciest.name, with: cheaperMeal.name });
+            return reply({ done: true });
           } else if (history.length > 1) {
             state.answers.push(content);
-          }
-          if (history.length > 1) {
-            // The "LLM" decides where to cut: cheaper meals only.
-            await byName.restaurants_search.invoke({ destination: task.destination, interests: [], max_cost_per_person: 500 });
+            // Continuing after a needs_clarification answer: same cut as above (cheaper meals), proposed
+            // and committed the same way.
+            const priciest = script.state.feedback.at(-1).current_choices.meals.reduce((a: any, b: any) => (b.est_cost > a.est_cost ? b : a));
+            const search = await byName.restaurants_search.invoke({ destination: task.destination, interests: [], max_cost_per_person: priciest.est_cost - 1 });
+            const cheaperMeal = (["Breakfast", "Lunch", "Dinner"] as const).flatMap((m) => search[m] ?? []).find((r: any) => r.name !== priciest.name);
+            if (cheaperMeal) await byName.propose_change.invoke({ kind: "restaurant", replace: priciest.name, with: cheaperMeal.name });
             return reply({ done: true });
           }
           await Promise.all([
@@ -150,24 +178,22 @@ describe("budget re-check", () => {
     expect(script.state.feedback).toEqual([]);
   });
 
-  it("continues the place agent's own session with budget feedback, stops without progress, then asks the user", async () => {
+  // The over-budget menu now shows on its own as soon as the first plan is over budget — no recheck_budget
+  // request needed — and there's no automatic cut before it (current_implementation.md decisions 2-3).
+  // Picking "Change a place to something cheaper" (menu index 0) is what drives a budget_feedback re-check.
+  it("continues the place agent's own session with budget feedback, stops without progress, then lets the user proceed", async () => {
     script.state.budget = 1000;
-    const result = await planTrip("trip", { hitl: new Hitl(["2", "1", ""]) });
+    // outbound, return, menu round1:"places" (2 attempts inside — improves then plateaus), menu round2:
+    // "places" again (no saving this time → dropped from the menu), menu round3:"proceed", confirm.
+    const result = await planTrip("trip", { hitl: new Hitl(["1", "1", "1", "1", "9", ""]) });
 
     const [first, second] = script.state.feedback;
-    expect(first).toMatchObject({ attempt: 1, cap: 1000, transport_fixed: true });
+    expect(first).toMatchObject({ attempt: 1, cap: 1000, lever: "places", transport_fixed: true });
     expect(first.breakdown).toHaveProperty("food");
     expect(first.current_choices.meals.length).toBeGreaterThan(0);
+    expect(second.attempt).toBe(2); // same recheckBudget call, its second (of budgetRetryLimit=2) attempt
 
-    // Same session: the first re-check is the 2nd message in the place agent's conversation, the next is the 3rd.
-    expect(script.state.historyAtRecheck).toEqual([2, 3]);
-    expect(result.subagent_tasks.find((t: any) => t.spec_name === "place_agent")).toMatchObject({ task_id: "place_agent-1", turns: 3 });
-
-    // Attempt 1 drops the expensive dinner; attempt 2 repeats the same limit, so there is no progress.
-    expect(result.budget_attempts).toHaveLength(2);
     expect(result.budget_attempts[0].total).toBeLessThan(first.total);
-    expect(result.budget_attempts[1].total).toBe(result.budget_attempts[0].total);
-    expect(second.attempt).toBe(2);
     expect(meals(result.itinerary)).not.toContain("Guru's Restaurant");
     expect(result.budget_status.ok).toBe(false);
   });
@@ -175,37 +201,51 @@ describe("budget re-check", () => {
   it("sends a question raised during a re-check to the user and continues with the answer", async () => {
     script.state.budget = 1000;
     script.state.askOnRecheck = true;
-    const result = await planTrip("trip", { hitl: new Hitl(["2", "Cut food", "Cut food", "1", ""]) });
-    expect(script.state.answers).toEqual(["Cut food", "Cut food"]);
-    expect(result.budget_attempts).toHaveLength(2);
+    mutableSettings.budgetRetryLimit = 1;
+    // outbound, return, menu:"places" (1 attempt, asks a clarifying question), menu:"proceed", confirm
+    const result = await planTrip("trip", { hitl: new Hitl(["1", "1", "1", "Cut food", "9", ""]) });
+    expect(script.state.answers).toEqual(["Cut food"]);
     expect(meals(result.itinerary)).not.toContain("Guru's Restaurant");
   });
 
   it("respects BUDGET_RETRY_LIMIT", async () => {
     script.state.budget = 1000;
     mutableSettings.budgetRetryLimit = 1;
-    const result = await planTrip("trip", { hitl: new Hitl(["2", "1", ""]) });
+    const result = await planTrip("trip", { hitl: new Hitl(["1", "1", "1", "9", ""]) });
     expect(result.budget_attempts).toHaveLength(1);
     expect(script.state.feedback).toHaveLength(1);
   });
 
-  it("lets the user raise the budget when re-checks can't fit it", async () => {
+  it("lets the user switch to a cheaper transport from the over-budget menu, with a before/after box to approve", async () => {
     script.state.budget = 1000;
-    const result = await planTrip("trip", { hitl: new Hitl(["2", "3", "999999", ""]) });
-    expect(result.requirements.budget).toBe(999_999);
-    expect(result.budget_status.ok).toBe(true);
-  });
-
-  it("lets the user switch to a cheaper transport", async () => {
-    script.state.budget = 1000;
-    const result = await planTrip("trip", { hitl: new Hitl(["2", "2", "1", "1", ""]) });
+    // outbound(2nd cheapest), return, menu:"transport" → re-pick outbound(cheapest)/return, apply? yes,
+    // menu round2:"proceed", confirm
+    const hitl = new Hitl(["2", "1", "2", "1", "1", "yes", "9", ""]);
+    const result = await planTrip("trip", { hitl });
     const [cheapest] = result.flights_result.options;
     expect(result.itinerary.transport.option).toBe(cheapest.option);
   });
 
-  it("re-checks the budget on request when only some transport options are over it", async () => {
+  it("keeps the current transport when the user rejects the switch three times", async () => {
+    script.state.budget = 1000;
+    const hitl = new Hitl([
+      "2", "1", "2", // outbound(2nd cheapest), return, menu:"transport"
+      "1", "1", "no", // try 1: re-pick cheapest, reject
+      "1", "1", "no", // try 2: same, reject
+      "1", "1", "no", // try 3: same, reject → gives up, asks the user
+      "", // the "kept your current transport" notice
+      "9", "", // menu round2:"proceed", confirm
+    ]);
+    const askYesNo = vi.spyOn(hitl, "askYesNo");
+    const result = await planTrip("trip", { hitl });
+    expect(askYesNo).toHaveBeenCalledTimes(3);
+    expect(result.itinerary.transport.option).toBe(result.flights_result.options[1].option);
+  });
+
+  it("shows the over-budget menu on its own when the picked transport option is expensive enough", async () => {
     script.state.budget = 30_000;
-    const hitl = new Hitl(["4", "4", "yes", "1", ""]); // Munnar has no railhead, so the list has four options
+    // Munnar has no railhead, so the list has four options — the priciest (index 3) tips this trip over budget.
+    const hitl = new Hitl(["4", "4", "1", "9", ""]); // outbound, return, menu:"places", menu:"proceed", confirm
     const askChoice = vi.spyOn(hitl, "askChoice");
     const result = await planTrip("trip", { hitl });
 
@@ -215,30 +255,8 @@ describe("budget re-check", () => {
   });
 });
 
-describe("all transport options over budget", () => {
-  it("asks the three-option menu before the transport list and continues with the raised budget", async () => {
-    script.state.budget = 1000;
-    const hitl = new Hitl(["3", "999999", "1", "1", ""]);
-    const askChoice = vi.spyOn(hitl, "askChoice");
-    const result = await planTrip("trip", { hitl });
-
-    expect(askChoice.mock.calls[0][1]).toHaveLength(3);
-    expect(askChoice.mock.calls[0][0]).toContain("All transport options put your trip over your ₹1000 budget");
-    expect(askChoice.mock.calls[1][1]).toHaveLength(result.flights_result.options.length);
-    expect(result.requirements.budget).toBe(999_999);
-    expect(result.budget_status.ok).toBe(true);
-  });
-
-  it("trims the plan around the cheapest transport before the plan is shown", async () => {
-    script.state.budget = 1000;
-    const result = await planTrip("trip", { hitl: new Hitl(["2", "1", ""]) });
-    expect(result.itinerary.transport.option).toBe(result.flights_result.options[0].option);
-    expect(script.state.feedback.length).toBeGreaterThan(0);
-  });
-});
-
 describe("choose_transport", () => {
-  it("labels every option, in order, with an estimated trip total", async () => {
+  it("labels every option, in order, by fare only — no per-option budget total", async () => {
     script.state.budget = 999_999;
     const hitl = new Hitl(["1", "1", ""]);
     const askChoice = vi.spyOn(hitl, "askChoice");
@@ -249,7 +267,8 @@ describe("choose_transport", () => {
     labels.forEach((label: string, i: number) => {
       const opt = result.flights_result.options[i];
       expect(label).toContain(`[${opt.mode}] ${opt.option}`);
-      expect(label).toMatch(/trip total ≈ ₹\d+ \(within budget ₹999999\)/);
+      expect(label).not.toContain("trip total");
+      expect(label).not.toContain("budget");
     });
   });
 

@@ -16,6 +16,7 @@ const USER_PERMISSIONS = [
   "ask_user",
   "update_preferences",
   "request_place_edit",
+  "propose_change",
   "present_plan",
   "launch_subagent",
   "wait_for_subagents",
@@ -31,7 +32,7 @@ const PERMISSIONS: Record<Role, Set<string>> = {
   admin: new Set([...USER_PERMISSIONS, "book_transportation"]),
 };
 
-export function can(principal: Principal, action: string): boolean {
+export function canAccess(principal: Principal, action: string): boolean {
   return PERMISSIONS[principal.role]?.has(action) ?? false;
 }
 

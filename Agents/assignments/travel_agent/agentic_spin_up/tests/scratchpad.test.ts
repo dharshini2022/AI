@@ -49,6 +49,41 @@ describe("results", () => {
   });
 });
 
+describe("staging (draft results for propose_change)", () => {
+  it("holds a stageable tool's result as a draft while staging is open, leaving the live output untouched", () => {
+    scratchpad.record("places_search", {}, { places: [1] });
+    scratchpad.setStaging(true);
+    scratchpad.record("places_search", {}, { places: [2] });
+    expect(scratchpad.output("places_search")).toEqual({ places: [1] });
+    expect(scratchpad.stagedOutput("places_search")).toEqual({ places: [2] });
+    expect(scratchpad.version).toBe(1);
+  });
+
+  it("does not stage a tool outside the stageable set, even while staging is open", () => {
+    scratchpad.setStaging(true);
+    scratchpad.record("weather_search", {}, { days: [] });
+    expect(scratchpad.output("weather_search")).toEqual({ days: [] });
+    expect(scratchpad.stagedOutput("weather_search")).toBeUndefined();
+  });
+
+  it("publish() writes a live result directly, keeping the draft available for a further item in the same turn", () => {
+    scratchpad.record("places_search", {}, { places: [1] });
+    scratchpad.setStaging(true);
+    scratchpad.record("places_search", {}, { places: [2] }); // the draft — propose_change reads this to build the merge
+    scratchpad.publish("places_search", { places: [1, 2] }); // e.g. one approved item merged into the live list
+    expect(scratchpad.output("places_search")).toEqual({ places: [1, 2] });
+    expect(scratchpad.stagedOutput("places_search")).toEqual({ places: [2] }); // still there for a second item
+    expect(scratchpad.version).toBe(2);
+  });
+
+  it("clears any leftover draft when staging closes", () => {
+    scratchpad.setStaging(true);
+    scratchpad.record("places_search", {}, { places: [2] });
+    scratchpad.setStaging(false);
+    expect(scratchpad.stagedOutput("places_search")).toBeUndefined();
+  });
+});
+
 describe("facts block", () => {
   it("is empty until requirements are saved", () => {
     expect(scratchpad.factsBlock()).toBe("");
@@ -140,6 +175,15 @@ describe("pin (the tool-call guardrail)", () => {
     expect(scratchpad.pin("places_search", { destination: "Madurai", exclude: ["Museums"] }).input.exclude).toEqual(["museums", "temples"]);
     expect(scratchpad.pin("restaurants_search", { destination: "Madurai" }).input.exclude).toEqual(["temples"]);
     expect(scratchpad.pin("accommodation_search", { destination: "Madurai" }).input).not.toHaveProperty("exclude");
+  });
+
+  it("ignores a malformed exclude from the model instead of crashing", () => {
+    scratchpad.setRequirements(trip);
+    scratchpad.addExclusions(["temples"]);
+    expect(scratchpad.pin("places_search", { destination: "Madurai", exclude: {} }).input.exclude).toEqual(["temples"]);
+    expect(scratchpad.pin("places_search", { destination: "Madurai", exclude: true }).input.exclude).toEqual(["temples"]);
+    expect(scratchpad.pin("places_search", { destination: "Madurai", exclude: "temples" }).input.exclude).toEqual(["temples"]);
+    expect(scratchpad.pin("places_search", { destination: "Madurai", exclude: [null, "Museums"] }).input.exclude).toEqual(["museums", "temples"]);
   });
 
   it("does not mutate the input it was given", () => {

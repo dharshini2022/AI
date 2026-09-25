@@ -69,6 +69,35 @@ describe("budget limit inputs", () => {
     expect(capped[0].price_per_night).toBe(cheapest);
   });
 
+  it("filterByProximity keeps only stays within reach of every given day-centre", async () => {
+    const all = await maps.searchAccommodation("Munnar", 2, null, null);
+    expect(all.some((s) => s.lat != null && s.lon != null)).toBe(true);
+
+    const nearby = all.find((s) => s.lat != null && s.lon != null)!;
+    const sameSpot = maps.filterByProximity(all, [[nearby.lat, nearby.lon]], 25);
+    expect(sameSpot.length).toBeGreaterThan(0);
+
+    const farAway = maps.filterByProximity(all, [[0, 0]], 25); // nowhere near Munnar
+    expect(farAway).toEqual([]);
+
+    // An empty centre list is a no-op — the ordinary, non-radius-scoped search.
+    expect(maps.filterByProximity(all, [], 25)).toEqual(all);
+  });
+
+  it("accommodation_search flags no_candidates_in_radius when near excludes every stay", async () => {
+    const log = vi.fn();
+    const near: any = await TOOLS.accommodation_search.run(
+      { destination: "Munnar", travellers: 2, start_date: "", nights: 0, near: [[0, 0]] },
+      log,
+    );
+    expect(near.accommodation_options).toEqual([]);
+    expect(near.no_candidates_in_radius).toBe(true);
+
+    const withoutNear: any = await TOOLS.accommodation_search.run({ destination: "Munnar", travellers: 2, start_date: "", nights: 0 }, log);
+    expect(withoutNear.accommodation_options.length).toBeGreaterThan(0);
+    expect(withoutNear.no_candidates_in_radius).toBeUndefined();
+  });
+
   it("restaurants_search drops venues above max_cost_per_person", async () => {
     const capped = await maps.searchRestaurants("Munnar", [], 500);
     expect(capped.Dinner.map((r: any) => r.name)).toEqual(["Taste of Munnar"]);

@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { settings } from "../config.ts";
 import {
   TRIP_LEGS,
   buildItinerary,
   checkBudget,
+  filterByProximity,
   getForecast,
   isBadWeather,
   searchAccommodation,
@@ -103,18 +105,32 @@ export const TOOLS: Record<string, ToolDefinition> = {
   },
 
   accommodation_search: {
-    description: "Accommodation candidates; pass start_date + nights for real nightly rates.",
+    description:
+      "Accommodation candidates; pass start_date + nights for real nightly rates. " +
+      "Budget re-check only: pass near (the trip's day-centre coordinates) to keep only stays within " +
+      `${settings.farFromStayKm} km of every day's planned places — used for the "cheaper stay" lever.`,
     inputSchema: {
       destination: z.string(),
       travellers: int,
       start_date: z.string().default(""),
       nights: int.default(0),
       max_price_per_night: limit("keep stays whose nightly rate is at or under this INR amount"),
+      near: z.array(z.tuple([z.number(), z.number()])).nullish().describe(
+        "Budget re-check only: day-centre [lat, lon] pairs; only stays within reach of every one are kept",
+      ),
     },
-    async run({ destination, travellers, start_date, nights, max_price_per_night }, log) {
+    async run({ destination, travellers, start_date, nights, max_price_per_night, near }, log) {
       await log(`[accommodation] Finding stays in ${destination} for ${travellers} traveller(s)`);
       const options = await searchAccommodation(destination, travellers, start_date || null, nights || null, max_price_per_night ?? null);
-      return flagOutage({ accommodation_options: options }, !options.length, log);
+      const withOutage = (await flagOutage({ accommodation_options: options }, !options.length, log)) as { accommodation_options: Dict[] };
+      const centers = pyOr(near, []) as [number, number][];
+      if (!centers.length) return withOutage;
+      const filtered = filterByProximity(options, centers, settings.farFromStayKm);
+      if (options.length && !filtered.length) {
+        await log(`[accommodation] No stays within ${settings.farFromStayKm} km of the planned places`);
+        return { ...withOutage, accommodation_options: [], no_candidates_in_radius: true };
+      }
+      return { ...withOutage, accommodation_options: filtered };
     },
   },
 
@@ -168,7 +184,7 @@ export const TOOLS: Record<string, ToolDefinition> = {
           activityCost: sum(activities.filter(guessed).map(cost)),
         },
       );
-      return { budget_status: { ...status, transport_legs: TRIP_LEGS } };
+      return { budget_status: { ...status, has_return_leg: truthy(back) } };
     },
   },
 };

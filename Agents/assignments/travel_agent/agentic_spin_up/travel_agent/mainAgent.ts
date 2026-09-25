@@ -13,6 +13,7 @@ import { type AgentSpec, loadSpec } from "./specs.ts";
 import { SpinUp } from "./spinUp.ts";
 import type { StdinChannel } from "./stdin.ts";
 import { type BudgetRecheck, fareText } from "./tools/index.ts";
+import { MAX_PROPOSAL_TRIES } from "./tools/proposals.ts";
 import { type Dict, fmtFixed, get, isDict, pyOr, todayIso, truthy } from "./tools/util.ts";
 import { ExtractedRequirementsSchema, REQUIRED_FIELDS, parseAndValidateField, validateRequirements } from "./validation.ts";
 export { offerBooking } from "./bookingFlow.ts";
@@ -66,53 +67,27 @@ export interface Plan {
   budget: Dict;
 }
 
-type PlanCache = { requirements: Dict; flightsResult: Dict; placesResult: Dict; itinerary: Dict; budget: Dict; version: number };
-
-// Plan-assembly state for one trip, updated by choose_transport/present_plan and read by buildPlan — avoids
-// buildPlan recomputing what choose_transport already assembled for the pick. Facts the agents share
-// (requirements, preferences, research results) live in the Scratchpad instead. Named methods, rather than raw
-// field access, so each place that changes plan state says what it's doing at the call site.
+// Plan-assembly state for one trip, updated by choose_transport/present_plan and read by buildPlan. Facts the
+// agents share (requirements, preferences, research results) live in the Scratchpad instead. Named methods,
+// rather than raw field access, so each place that changes plan state says what it's doing at the call site.
 class TripPlanState {
   private transportIndex: number | null = null;
   private returnIndex: number | null = null; // null when the research has no return options
-  private adjustPlaces = false; // user chose to keep the cheapest transport and trim places to fit the budget
-  // The preview computed when the transport was picked; only valid while no new research has been recorded since.
-  private cache: PlanCache | null = null;
   private plan: Plan | null = null; // the plan last shown to the user
   private planVersion = -1; // scratchpad version that plan was built from
   private presentations = 0;
   private recheck: BudgetRecheck | null = null;
   private attempts: Dict[] = []; // budget re-check attempts made so far
 
-  // choose_transport records every pick here. "Switch to a cheaper transport" (from resolveOverBudget) also
-  // calls this, with only the two indices — omitting `cache`/`adjustPlaces` leaves them as they were.
-  recordTransportChoice(index: number, returnIndex: number | null, cache?: PlanCache, adjustPlaces?: boolean): void {
+  // choose_transport records every pick here; "switch to a cheaper transport" (from the over-budget menu)
+  // also calls this after the user re-picks.
+  recordTransportChoice(index: number, returnIndex: number | null): void {
     this.transportIndex = index;
     this.returnIndex = returnIndex;
-    if (cache) this.cache = cache;
-    if (adjustPlaces !== undefined) this.adjustPlaces = adjustPlaces;
   }
 
   get transportIndices(): { transportIndex: number | null; returnIndex: number | null } {
     return { transportIndex: this.transportIndex, returnIndex: this.returnIndex };
-  }
-
-  get shouldAdjustPlaces(): boolean {
-    return this.adjustPlaces;
-  }
-
-  // The assembled result from when the transport was chosen, if it's still valid for this rebuild: same
-  // picks, same budget cap and traveller count, and no new research recorded since.
-  cachedAssembly(scratchpadVersion: number, flightsResult: Dict, requirements: Dict): { placesResult: Dict; itinerary: Dict; budget: Dict } | null {
-    const cache = this.cache;
-    const valid =
-      cache &&
-      cache.version === scratchpadVersion &&
-      cache.flightsResult.selected === flightsResult.selected &&
-      cache.flightsResult.selected_return === flightsResult.selected_return &&
-      get(cache.requirements, "budget") === get(requirements, "budget") &&
-      get(cache.requirements, "num_travellers") === get(requirements, "num_travellers");
-    return valid && cache ? { placesResult: cache.placesResult, itinerary: cache.itinerary, budget: cache.budget } : null;
   }
 
   get isFirstPresentation(): boolean {
@@ -335,122 +310,68 @@ function flightsFor(transport: Dict, selected: Dict, selectedReturn: Dict | null
   };
 }
 
-// One option's line in a transport prompt: what it is, its fare, and the trip total it leads to.
-function optionLabel(option: Dict, budget: Dict, cap: number | null): string {
+// One option's line in a transport prompt: what it is and its fare only — no per-option budget math.
+// The trip-total effect of a pick is shown later, once, by buildPlan/present_plan.
+function optionLabel(option: Dict): string {
   const notes = truthy(option.notes) ? ` (${option.notes})` : "";
-  const fit = cap == null
-    ? ""
-    : truthy(budget.ok)
-      ? ` (within budget ₹${fmtFixed(cap, 0)})`
-      : ` (over budget ₹${fmtFixed(cap, 0)} by ₹${fmtFixed(budget.overage, 0)})`;
   const modeTag = option.mode ? `[${option.mode}] ` : "";
-  return (
-    `${modeTag}${option.option} via ${option.provider} — ${option.travel_time} — ${fareText(option)}${notes}` +
-    ` · trip total ≈ ₹${fmtFixed(budget.total, 0)}${fit}`
-  );
+  return `${modeTag}${option.option} via ${option.provider} — ${option.travel_time} — ${fareText(option)}${notes}`;
 }
 
-type Leg = { label: string; flightsResult: Dict; itinerary: Dict; budget: Dict };
+type Leg = { label: string; flightsResult: Dict };
 
-// merge_plan + budget_check are local, deterministic MCP calls (no LLM, no external network — see
-// mcp_server/handlers.ts), so one per option is cheap. Returns each option's full assembled result
-// too, so choose_transport can cache the picked one instead of buildPlan recomputing it.
-async function computeLegs(
-  mcp: McpTools,
-  requirements: Dict,
-  placesResult: Dict,
-  legOptions: Dict[],
-  flights: (option: Dict) => Dict,
-): Promise<Leg[]> {
-  const cap = get(requirements, "budget");
-  const results: Leg[] = [];
-  for (const option of legOptions) {
-    const flightsResult = flights(option);
-    const { itinerary, budget } = await assemble(mcp, requirements, flightsResult, placesResult);
-    results.push({ label: optionLabel(option, budget, cap), flightsResult, itinerary, budget });
-  }
-  return results;
+// Plain synchronous mapping from researched options to their labels — no MCP calls, no assembly.
+// The full itinerary/budget is only computed once, after the user has picked, by buildPlan.
+function computeLegs(legOptions: Dict[], flights: (option: Dict) => Dict): Leg[] {
+  return legOptions.map((option) => ({ label: optionLabel(option), flightsResult: flights(option) }));
 }
 
 // Each outbound option is priced with the cheapest return, until the user picks the return.
-function computeTransportOptions(mcp: McpTools, requirements: Dict, transport: Dict, placesResult: Dict): Promise<Leg[]> {
+function computeTransportOptions(transport: Dict): Leg[] {
   const cheapestReturn: Dict | null = pyOr(transport.return_options, [])[0] ?? null;
-  return computeLegs(mcp, requirements, placesResult, pyOr(transport.options, []), (option) => flightsFor(transport, option, cheapestReturn));
+  return computeLegs(pyOr(transport.options, []), (option) => flightsFor(transport, option, cheapestReturn));
 }
 
 // Each return option priced together with the chosen outbound option.
-function computeReturnOptions(mcp: McpTools, requirements: Dict, transport: Dict, selected: Dict, placesResult: Dict): Promise<Leg[]> {
-  return computeLegs(mcp, requirements, placesResult, pyOr(transport.return_options, []), (back) => flightsFor(transport, selected, back));
+function computeReturnOptions(transport: Dict, selected: Dict): Leg[] {
+  return computeLegs(pyOr(transport.return_options, []), (back) => flightsFor(transport, selected, back));
 }
 
-// Asks for the outbound option and then, when the research has return options, the return option. Each label
-// shows the trip total that pick leads to. `picked` is the assembled result for the final pair.
+// Asks for the outbound option and then, when the research has return options, the return option.
+// `picked` is only the fare-level pick — no assembled itinerary/budget; that comes later from buildPlan.
 async function askTransport(
-  mcp: McpTools,
   hitl: Hitl,
-  requirements: Dict,
   transport: Dict,
-  placesResult: Dict,
   computed: Leg[],
 ): Promise<{ index: number; returnIndex: number | null; picked: Leg }> {
   const returnOptions: Dict[] = pyOr(transport.return_options, []);
   const { index } = await hitl.handleTransportChoice(
-    `Choose your ${returnOptions.length ? "outbound " : ""}transport (fares are per person, one way; trip totals include the return journey` +
-      `${returnOptions.length ? " (priced at the cheapest return until you choose it)" : ""}, stay, food and activities):`,
+    `Choose your ${returnOptions.length ? "outbound " : ""}transport (fares are per person, one way):`,
     computed.map((c) => c.label),
   );
   const outbound = computed[index];
   if (!returnOptions.length) return { index, returnIndex: null, picked: outbound };
 
-  const back = await computeReturnOptions(mcp, requirements, transport, outbound.flightsResult.selected, placesResult);
+  const back = computeReturnOptions(transport, outbound.flightsResult.selected);
   const { index: returnIndex } = await hitl.handleTransportChoice(
-    `Choose your return transport (${transport.return_route} on ${transport.return_date}; fares are per person, one way; ` +
-      "trip totals include your outbound choice, stay, food and activities):",
+    `Choose your return transport (${transport.return_route} on ${transport.return_date}; fares are per person, one way):`,
     back.map((c) => c.label),
   );
   return { index, returnIndex, picked: back[returnIndex] };
 }
 
-async function askNewBudget(hitl: Hitl): Promise<number | null> {
-  const { answer } = await hitl.handleSubagentClarification("What is your new total budget in INR?");
-  return Number(String(answer).replace(/[^\d.]/g, "")) || null;
-}
-
-type ComputedTransportOption = Leg;
-
-export type TransportBudgetConflict =
-  | { action: "change_transportation"; request: string }
-  | { action: "adjust_places"; index: number }
-  | { action: "raise_budget"; budget: number };
-
-// Code detects "every option is over budget" and shows the menu; what happens next stays with the agents.
-// Only asks and reports — it changes no state. Returns null when the menu does not apply.
-export async function resolveTransportBudgetConflict(
-  hitl: Hitl,
-  computed: ComputedTransportOption[],
-  requirements: Dict,
-): Promise<TransportBudgetConflict | null> {
-  const cap = get(requirements, "budget");
-  if (cap == null || !computed.length || computed.some((c) => truthy(c.budget.ok))) return null;
-
-  const cheapest = computed.reduce((best, c, i) => (c.budget.total < computed[best].budget.total ? i : best), 0);
-  const pick = get(computed[cheapest].flightsResult, "selected", {});
-  const mode = pick.mode ? `${pick.mode}: ` : "";
-  const travellers = Number(get(requirements, "num_travellers", 1));
-  const { index } = await hitl.handleBudgetResolution(
-    `All transport options put your trip over your ₹${fmtFixed(cap, 0)} budget. The cheapest is ${mode}${pick.option} via ${pick.provider}, ` +
-      `at a trip total of ₹${fmtFixed(computed[cheapest].budget.total, 0)} for ${travellers} traveller${travellers === 1 ? "" : "s"}. What would you like to do?`,
-    ["Change transportation (different date, route or mode)", "Adjust trip places to fit the budget (keep the cheapest transport)", "Increase my budget"],
-  );
-
-  if (index === 0) {
-    const { answer } = await hitl.handleSubagentClarification("What would you like to change about the transportation (for example a different date, route or mode)?");
-    return answer.trim() ? { action: "change_transportation", request: answer.trim() } : null;
-  }
-  if (index === 1) return { action: "adjust_places", index: cheapest };
-
-  const budget = await askNewBudget(hitl);
-  return budget ? { action: "raise_budget", budget } : null;
+// The same style of before/after box as formatChangeBox (tools/proposals.ts), for the one lever that isn't
+// an LLM proposal: transport is picked by the user directly from a list, so there's nothing for
+// humanInTheLoopMiddleware to intercept — see current_implementation.md step 7's noted limitation.
+function formatTransportChangeBox(current: Plan, picked: Leg, newBudget: Dict, attempt: number): string {
+  const lines = [
+    `\nSwitch transport?\n`,
+    `┌ Proposed Change (try ${attempt} of ${MAX_PROPOSAL_TRIES}) ─────────────────────────────`,
+    `│ To      : ${picked.label}`,
+    `│ Trip total: ₹${fmtFixed(current.budget.total, 0)} → ₹${fmtFixed(newBudget.total, 0)}`,
+    `└───────────────────────────────────────────────────────────────────`,
+  ];
+  return lines.join("\n");
 }
 
 // ask_user and choose_transport are plain, ungated tools: they already do real synchronous
@@ -522,15 +443,34 @@ function mainAgentTools(spin: SpinUp, hitl: Hitl, mcp: McpTools, state: TripPlan
       if (!place) return { error: "place_agent has not been launched yet." };
       scratchpad.addExclusions(add_exclude ?? []);
       scratchpad.removeExclusions(remove_exclude ?? []);
-      spin.send(place.id, JSON.stringify({ description }));
-      await spin.wait([place.id]);
-      return { task_id: place.id, status: place.status, question: place.status === "needs_clarification" ? place.reply?.needs_clarification : null };
+      // Same draft → propose → approve flow as a budget re-check (current_implementation.md step 8): the
+      // user's own edit requests get the same before/after approval as an automatic cost cut. The
+      // clarification loop is handled here too (rather than handed back to the Main Agent, the way STEP 2's
+      // launch does) so staging — and with it, propose_change's ability to find a draft — stays open across
+      // it; closing and reopening staging around a round trip through the Main Agent would otherwise discard
+      // the very search results a clarification answer is about to unblock.
+      scratchpad.setStaging(true);
+      try {
+        spin.send(place.id, JSON.stringify({ description }));
+        await spin.wait([place.id]);
+        while (place.status === "needs_clarification") {
+          const { answer } = await hitl.askUser(`The place agent asks: ${place.reply?.needs_clarification}`);
+          spin.send(place.id, answer);
+          await spin.wait([place.id]);
+        }
+      } finally {
+        scratchpad.setStaging(false);
+        hitl.proposals.clear();
+      }
+      return { task_id: place.id, status: place.status, question: null };
     },
     {
       name: "request_place_edit",
       description:
         "Ask place_agent to apply a change the user described after seeing the plan (e.g. 'no temples', 'swap the museum'). " +
-        "If they said what they do not want (or want back), pass it as add_exclude / remove_exclude too. Waits for the result.",
+        "If they said what they do not want (or want back), pass it as add_exclude / remove_exclude too. Waits for the " +
+        "result, answering any clarifying question place_agent asks along the way itself — you'll never see a " +
+        "needs_clarification status back from this call.",
       schema: z.object({
         description: z.string().describe("The change, in the user's own words"),
         add_exclude: z.array(z.string()).nullish().describe("Kinds of place or food to leave out"),
@@ -542,7 +482,7 @@ function mainAgentTools(spin: SpinUp, hitl: Hitl, mcp: McpTools, state: TripPlan
   // The interrupt (set up in createMainAgentHitlMiddleware) is the actual approval step —
   // this only runs at all once a human has approved it, so it just reports the outcome.
   // Recording the decision here (rather than trusting the model to repeat it later) is what
-  // lets choose_transport preview totals with the real indoor setting instead of guessing.
+  // lets buildPlan assemble with the real indoor setting instead of guessing.
   const setIndoorMode = tool(
     async ({ enabled }: { reason?: string; enabled?: boolean }) => {
       scratchpad.setIndoorMode(enabled ?? true);
@@ -565,45 +505,15 @@ function mainAgentTools(spin: SpinUp, hitl: Hitl, mcp: McpTools, state: TripPlan
       await ensurePlaceResearch(spin);
       const transport = transportResearch(scratchpad);
       if (!pyOr(transport.options, []).length) return { error: "No transport options yet — launch transportation_agent first." };
-      let requirements: Dict = { ...scratchpad.requireRequirements() };
-      const placesResult = buildPlacesResult(scratchpad);
-      let computed = await computeTransportOptions(mcp, requirements, transport, placesResult);
-
-      const conflict = await resolveTransportBudgetConflict(hitl, computed, requirements);
-      if (conflict?.action === "change_transportation") {
-        return { action: "change_transportation", request: conflict.request };
-      }
-      if (conflict?.action === "raise_budget") {
-        scratchpad.updateRequirements({ budget: conflict.budget });
-        requirements = { ...scratchpad.requireRequirements() };
-        computed = await computeTransportOptions(mcp, requirements, transport, placesResult);
-      }
-
-      const adjustPlaces = conflict?.action === "adjust_places";
-      const hasReturn = pyOr(transport.return_options, []).length > 0;
-      const pick = conflict?.action === "adjust_places"
-        ? { index: conflict.index, returnIndex: hasReturn ? 0 : null, picked: computed[conflict.index] } // cheapest both ways, no return prompt
-        : await askTransport(mcp, hitl, requirements, transport, placesResult, computed);
-      state.recordTransportChoice(
-        pick.index,
-        pick.returnIndex,
-        {
-          requirements,
-          flightsResult: pick.picked.flightsResult,
-          placesResult,
-          itinerary: pick.picked.itinerary,
-          budget: pick.picked.budget,
-          version: scratchpad.version,
-        },
-        adjustPlaces,
-      );
+      const computed = computeTransportOptions(transport);
+      const pick = await askTransport(hitl, transport, computed);
+      state.recordTransportChoice(pick.index, pick.returnIndex);
       return { index: pick.index, return_index: pick.returnIndex, choice: pick.picked.label };
     },
     {
       name: "choose_transport",
       description:
-        "Show the user every researched outbound transport option with an estimated trip total, then the return options, and record their picks. " +
-        "If every option is over budget, asks the user what to do first (may return action change_transportation). " +
+        "Show the user every researched outbound transport option by fare and travel time, then the return options, and record their picks. " +
         "Waits for running research first.",
       schema: z.object({}),
     },
@@ -626,7 +536,9 @@ function mainAgentTools(spin: SpinUp, hitl: Hitl, mcp: McpTools, state: TripPlan
       name: "present_plan",
       description:
         "Assemble the itinerary from the research so far, show it to the user and return a short budget summary. " +
-        "Pass recheck_budget=true to first ask the place agent to cut costs when the user wants the plan to fit the budget.",
+        "If the plan is over budget, this shows the user a 4-way menu itself (change a place, switch transport, " +
+        "switch accommodation, or proceed anyway) and handles it before returning. Pass recheck_budget=true when " +
+        "the user asks to fit the budget after already seeing the plan, to show that menu again.",
       schema: z.object({ recheck_budget: z.boolean().nullish() }),
     },
   );
@@ -635,11 +547,27 @@ function mainAgentTools(spin: SpinUp, hitl: Hitl, mcp: McpTools, state: TripPlan
 }
 
 
-function budgetFeedback(attempt: number, plan: Plan): Dict {
+// One day's centre point, averaged from its activities' coordinates — used so a "cheaper stay" search can be
+// scoped to stay within reach of every day, the same centroid buildDayCards already computes per day for meal
+// picking (travel_agent/tools/itinerary.ts). Days with no located activities are skipped.
+function dayCenters(itinerary: Dict): [number, number][] {
+  const cards: Dict[] = get(itinerary, "cards", []);
+  return cards
+    .map((c) => (get(c, "activities", []) as Dict[]).filter((a) => a.lat != null && a.lon != null))
+    .filter((pts) => pts.length)
+    .map((pts) => [pts.reduce((s, p) => s + p.lat, 0) / pts.length, pts.reduce((s, p) => s + p.lon, 0) / pts.length] as [number, number]);
+}
+
+// `lever` scopes what place_agent is allowed to change this re-check — the user's explicit budget-menu pick
+// (current_implementation.md step 6). See agent-skills/budget_cut. There's no unscoped "any" any more: the
+// automatic pre-menu cut it used to describe was removed (decision 3 — no cutting without the user choosing
+// a lever first).
+function budgetFeedback(attempt: number, plan: Plan, lever: "places" | "accommodation"): Dict {
   const cards: Dict[] = get(plan.itinerary, "cards", []);
   const stay = get(plan.itinerary, "accommodation", {});
   return {
     attempt,
+    lever,
     cap: plan.budget.cap,
     total: plan.budget.total,
     overage: plan.budget.overage,
@@ -650,6 +578,9 @@ function budgetFeedback(attempt: number, plan: Plan): Dict {
       places: cards.flatMap((c) => get(c, "activities", []) as Dict[]).map((a) => ({ name: a.name, est_cost: a.est_cost })),
       meals: cards.flatMap((c) => get(c, "meals", []) as Dict[]).map((m) => ({ meal: m.meal, name: m.name, est_cost: m.est_cost })),
     },
+    // Only meaningful for lever "accommodation" — the day-centre points accommodation_search's `near`
+    // argument should be given, so a cheaper stay is never proposed far from the trip's planned places.
+    ...(lever === "accommodation" ? { day_centers: dayCenters(plan.itinerary) } : {}),
   };
 }
 
@@ -662,68 +593,124 @@ async function recheckBudget(
   plan: Plan,
   maxAttempts: number,
   state: TripPlanState,
+  lever: "places" | "accommodation",
 ): Promise<Plan> {
   const place = spin.latest(PLACES);
   if (!place) return plan;
   let current = plan;
-  for (let n = 0; n < maxAttempts && !truthy(current.budget.ok); n++) {
-    const attempt = state.budgetAttempts.length + 1;
-    console.log(`  [Main Agent] [budget] Over by ₹${fmtFixed(current.budget.overage, 0)} — asking place agent to re-check (attempt ${attempt})`);
-    spin.send(place.id, JSON.stringify({ budget_feedback: budgetFeedback(attempt, current) }));
-    await spin.wait([place.id]);
-
-    // The Main Agent's LLM is not running during a re-check, so a question raised here goes to the user.
-    while (place.status === "needs_clarification") {
-      const { answer } = await hitl.askUser(`The place agent asks: ${place.reply?.needs_clarification}`);
-      spin.send(place.id, answer);
+  // Search results place_agent writes this turn are drafts, published only through an approved
+  // propose_change — see current_implementation.md steps 2-4. Closing staging (in `finally`) discards
+  // anything left un-approved, so a rejected or abandoned search never leaks into the next read.
+  spin.scratchpad.setStaging(true);
+  // The radius guardrail (step 5): code injects the day centres into every accommodation_search call for
+  // this lever, so it never depends on the model remembering to pass `near` itself.
+  if (lever === "accommodation") spin.scratchpad.setAccommodationRadius(dayCenters(current.itinerary));
+  try {
+    for (let n = 0; n < maxAttempts && !truthy(current.budget.ok); n++) {
+      const attempt = state.budgetAttempts.length + 1;
+      console.log(`  [Main Agent] [budget] Over by ₹${fmtFixed(current.budget.overage, 0)} — asking place agent to re-check (attempt ${attempt}, lever: ${lever})`);
+      spin.send(place.id, JSON.stringify({ budget_feedback: budgetFeedback(attempt, current, lever) }));
       await spin.wait([place.id]);
-    }
-    if (place.status !== "done") {
-      console.log(`  [Main Agent] [budget] Budget re-check ended: ${place.error ?? place.status}`);
-      break;
-    }
 
-    const placesResult = buildPlacesResult(spin.scratchpad);
-    const next: Plan = { ...current, placesResult, ...(await assemble(mcp, current.requirements, current.flightsResult, placesResult, current.itinerary)) };
-    state.recordBudgetAttempt({ attempt, total: next.budget.total });
-    if (next.budget.total >= current.budget.total) break;
-    current = next;
+      // The Main Agent's LLM is not running during a re-check, so a question raised here goes to the user.
+      while (place.status === "needs_clarification") {
+        const { answer } = await hitl.askUser(`The place agent asks: ${place.reply?.needs_clarification}`);
+        spin.send(place.id, answer);
+        await spin.wait([place.id]);
+      }
+      if (place.status !== "done") {
+        console.log(`  [Main Agent] [budget] Budget re-check ended: ${place.error ?? place.status}`);
+        break;
+      }
+
+      const placesResult = buildPlacesResult(spin.scratchpad);
+      const next: Plan = { ...current, placesResult, ...(await assemble(mcp, current.requirements, current.flightsResult, placesResult, current.itinerary)) };
+      state.recordBudgetAttempt({ attempt, total: next.budget.total });
+      if (next.budget.total >= current.budget.total) break;
+      current = next;
+    }
+  } finally {
+    spin.scratchpad.setStaging(false);
+    spin.scratchpad.setAccommodationRadius(null);
+    // A retry limit used up (or a candidate rejected) during this visit shouldn't carry into an unrelated
+    // later request — see ProposalTracker.clear() and current_implementation.md's review notes.
+    hitl.proposals.clear();
   }
   return current;
 }
 
-async function resolveOverBudget(mcp: McpTools, spin: SpinUp, hitl: Hitl, plan: Plan, state: TripPlanState): Promise<Plan> {
-  const { index } = await hitl.handleBudgetResolution(
-    `The plan is still over your ₹${fmtFixed(plan.budget.cap, 0)} budget by ₹${fmtFixed(plan.budget.overage, 0)}. What would you like to do?`,
-    [`Keep this plan (₹${fmtFixed(plan.budget.total, 0)})`, "Switch to a cheaper transport", "Raise my budget"],
-  );
+type BudgetLever = "places" | "transport" | "accommodation";
 
-  if (index === 1) {
-    const transport = transportResearch(spin.scratchpad);
-    if (!pyOr(transport.options, []).length) return plan;
-    const computed = await computeTransportOptions(mcp, plan.requirements, transport, plan.placesResult);
-    const { index, returnIndex, picked } = await askTransport(mcp, hitl, plan.requirements, transport, plan.placesResult, computed);
-    // Recorded so a later rebuild (after a plan edit) keeps the switched transport.
-    state.recordTransportChoice(index, returnIndex);
-    return { ...plan, flightsResult: picked.flightsResult, itinerary: picked.itinerary, budget: picked.budget };
+const LEVER_LABEL: Record<BudgetLever, string> = {
+  places: "Change a place to something cheaper",
+  transport: "Switch to a cheaper transport",
+  accommodation: "Switch to cheaper accommodation",
+};
+
+// Transport isn't an LLM proposal (it's the user's own pick from a list — see formatTransportChangeBox above),
+// so it gets its own approval loop here rather than going through propose_change. Up to MAX_PROPOSAL_TRIES
+// re-picks, each shown as a before/after box, matching the same "try N of 3" rule as every other lever.
+async function switchTransport(mcp: McpTools, spin: SpinUp, hitl: Hitl, plan: Plan, state: TripPlanState): Promise<Plan> {
+  const transport = transportResearch(spin.scratchpad);
+  if (!pyOr(transport.options, []).length) return plan;
+  for (let attempt = 1; attempt <= MAX_PROPOSAL_TRIES; attempt++) {
+    const computed = computeTransportOptions(transport);
+    const { index, returnIndex, picked } = await askTransport(hitl, transport, computed);
+    const assembled = await assemble(mcp, plan.requirements, picked.flightsResult, plan.placesResult, plan.itinerary);
+    console.log(formatTransportChangeBox(plan, picked, assembled.budget, attempt));
+    const { answer } = await hitl.askYesNo("Apply this transport change?");
+    if (answer) {
+      state.recordTransportChoice(index, returnIndex);
+      return { ...plan, flightsResult: picked.flightsResult, ...assembled };
+    }
   }
-
-  if (index === 2) {
-    const amount = await askNewBudget(hitl);
-    if (!amount) return plan;
-    spin.scratchpad.updateRequirements({ budget: amount });
-    const requirements = { ...plan.requirements, budget: amount };
-    const raised: Plan = { ...plan, requirements, ...(await assemble(mcp, requirements, plan.flightsResult, plan.placesResult, plan.itinerary)) };
-    return recheckBudget(mcp, spin, hitl, raised, 1, state);
-  }
-
+  console.log(`\nKept your current transport — ${MAX_PROPOSAL_TRIES} different options were tried and none were approved.`);
   return plan;
 }
 
-// Assembles the plan once. Reuses choose_transport's cached assemble() result for the picked
-// option when it's still valid (same budget cap, traveller count and no new research since), instead of
-// recomputing the same deterministic merge_plan/budget_check call — see concepts/human-in-the-loop.md for why
-// the preview now uses the real indoor_mode, which is what makes this cache trustworthy.
+// The 4-way over-budget menu (current_implementation.md step 6): no automatic cutting — the user always
+// picks the lever. A `while` loop, not recursion, so repeat visits are bounded by removing a lever that
+// produced no saving, rather than relying on MAX_PLAN_REVISION_TURNS (which only counts present_plan calls,
+// not menu visits inside one). Every place/restaurant/accommodation change inside a lever is itself approved
+// per item through propose_change (recheckBudget → the place_agent turn); this loop only decides *which*
+// lever to try and when to stop offering it.
+async function resolveOverBudget(mcp: McpTools, spin: SpinUp, hitl: Hitl, plan: Plan, state: TripPlanState): Promise<Plan> {
+  let current = plan;
+  let available: BudgetLever[] = ["places", "transport", "accommodation"];
+
+  while (!truthy(current.budget.ok) && available.length) {
+    const proceedLabel = `Proceed with this plan anyway (₹${fmtFixed(current.budget.total, 0)})`;
+    const { index } = await hitl.handleBudgetResolution(
+      `The plan is still over your ₹${fmtFixed(current.budget.cap, 0)} budget by ₹${fmtFixed(current.budget.overage, 0)}. What would you like to do?`,
+      [...available.map((l) => LEVER_LABEL[l]), proceedLabel],
+    );
+    if (index >= available.length) return current; // "proceed"
+
+    const lever = available[index];
+    const before = current.budget.total;
+    current =
+      lever === "transport"
+        ? await switchTransport(mcp, spin, hitl, current, state)
+        : await recheckBudget(mcp, spin, hitl, current, settings.budgetRetryLimit, state, lever);
+
+    if (current.budget.total >= before) {
+      // Nothing was approved for this lever — drop it so the user isn't offered a dead end again.
+      available = available.filter((l) => l !== lever);
+      if (lever === "accommodation") {
+        // Deliberately lever-neutral: this fires whether nothing cheaper was found, nothing was within reach
+        // of the planned places, or the user rejected every candidate offered — code can't tell which from
+        // here without more plumbing than the distinction is worth.
+        console.log("\nNo cheaper accommodation was approved.");
+      }
+    }
+  }
+  return current;
+}
+
+// Assembles the plan once from the research recorded in the scratchpad and the transport indices
+// choose_transport recorded. There is no cache to reuse any more — with the per-option precompute gone
+// (see step 1 of current_implementation.md), this is already the only assemble() call for a normal
+// present_plan turn, so there is nothing left to save by caching it.
 async function buildPlan(mcp: McpTools, spin: SpinUp, state: TripPlanState): Promise<Plan> {
   // Only waits for sub-agents the Main Agent launched; code never launches research itself.
   await spin.wait();
@@ -742,31 +729,27 @@ async function buildPlan(mcp: McpTools, spin: SpinUp, state: TripPlanState): Pro
     returnOptions.length ? pickFrom(returnOptions, returnIndex) : null,
   );
 
-  const cached = state.cachedAssembly(scratchpad.version, flightsResult, requirements);
-  if (cached) {
-    console.log("  [Main Agent] [budget] Reusing the total already computed when the transport was chosen");
-    return { requirements, flightsResult, ...cached };
-  }
-
   const placesResult = buildPlacesResult(scratchpad);
   console.log("  [Main Agent] [itinerary] Assembling day-by-day itinerary layout");
   console.log("  [Main Agent] [budget] Calculating trip budget & expenses");
   return { requirements, flightsResult, placesResult, ...(await assemble(mcp, requirements, flightsResult, placesResult, state.previousItinerary)) };
 }
 
+// No automatic cutting (current_implementation.md decision 3) — straight to the 4-way menu, which is the
+// only thing that changes the plan from here.
 async function fitPlanToBudget(mcp: McpTools, spin: SpinUp, hitl: Hitl, plan: Plan, state: TripPlanState): Promise<Plan> {
   const initialTotal = plan.budget.total;
-  let next = await recheckBudget(mcp, spin, hitl, plan, settings.budgetRetryLimit, state);
-  if (!truthy(next.budget.ok)) next = await resolveOverBudget(mcp, spin, hitl, next, state);
+  const next = await resolveOverBudget(mcp, spin, hitl, plan, state);
   state.recordRecheckSummary(initialTotal, next.budget.total);
   return next;
 }
 
-// Builds the plan from the scratchpad, trims it to the budget when asked (or when the user chose to keep the
-// cheapest transport and adjust places), shows it, and remembers it as the plan the user last saw.
+// Builds the plan from the scratchpad, shows it, and remembers it as the plan the user last saw. The
+// over-budget menu appears on its own the first time a plan is over budget, and again whenever present_plan
+// is called with recheck_budget:true (current_implementation.md decision 2) — never automatically otherwise.
 async function presentPlan(mcp: McpTools, spin: SpinUp, hitl: Hitl, state: TripPlanState, recheck: boolean): Promise<Plan> {
   let plan = await buildPlan(mcp, spin, state);
-  if (recheck || (state.isFirstPresentation && state.shouldAdjustPlaces && !truthy(plan.budget.ok))) {
+  if (!truthy(plan.budget.ok) && (recheck || state.isFirstPresentation)) {
     plan = await fitPlanToBudget(mcp, spin, hitl, plan, state);
   }
   state.recordShownPlan(plan, spin.scratchpad.version);
@@ -806,7 +789,7 @@ export async function planTrip(
   const mcp = await new McpTools().open();
   try {
     const scratchpad = new Scratchpad();
-    const spin = new SpinUp(mcp, summarizeResearch, authPrincipal, scratchpad);
+    const spin = new SpinUp(mcp, summarizeResearch, authPrincipal, scratchpad, channel);
     const state = new TripPlanState();
     const draft = new RequirementsDraft();
     const mainAgent = new Agent(MAIN_AGENT_SPEC, mcp, {

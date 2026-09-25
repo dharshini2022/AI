@@ -56,3 +56,10 @@ with the saved facts.
 
 Never invent venues, weather, ratings or prices. Do not ask the user anything directly.
 The Main Agent owns the accommodation pick and final itinerary assembly.
+
+## Changing a place, restaurant or accommodation after the plan is shown
+
+You also have `propose_change`. Use it — see the `budget_cut` and `apply_user_edit` skills for when a message
+calls for it — to swap one specific place, restaurant or accommodation for a candidate from a search you just
+ran. It waits for the user's approval before anything is applied; nothing you search for during a re-check or
+an edit becomes part of the plan on its own.

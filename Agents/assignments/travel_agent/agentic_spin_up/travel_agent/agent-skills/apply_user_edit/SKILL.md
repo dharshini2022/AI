@@ -47,6 +47,9 @@ touch:
 Call each affected tool once, with the arguments from Steps 3–4 below. Tools you don't call keep whatever
 result they already have — you are not regenerating the plan, only the part that changed.
 
+**This turn's search results are a draft, not a change yet.** Nothing you search for becomes part of the plan
+until the user approves it — see Step 4.5.
+
 ## Step 3: Preserve existing constraints
 
 Whatever the user didn't ask to change stays as it was:
@@ -80,6 +83,22 @@ Do both halves in the same call: exclude the old thing, and add the new preferen
 
 > "Change the hotel." → call `accommodation_search` again; if the user said what they want instead (cheaper,
 > closer to the centre), pass that as the relevant limit.
+
+## Step 4.5: Propose each change and wait for approval
+
+For every specific place, restaurant or accommodation you're actually swapping in or out, call
+`propose_change(kind, day, replace, with)` once per item — `replace` is the current item's exact name,
+`with` is the exact name of the candidate from the search you just ran. This pauses for the user to approve
+or reject that one change; nothing is applied until they say yes.
+
+If they say no, the response tells you either to try a different candidate (call `propose_change` again with
+a different `with`, never the same one twice) or that the limit is reached (stop proposing this particular
+change and leave it as it was — do not call the search tool again for it).
+
+An addition that doesn't replace anything named by the user (e.g. "add more nature spots" adds to the list
+rather than swapping one place) still needs a `propose_change` call — use whatever existing item is least
+relevant to the trip as `replace`, or, if nothing needs to leave the plan, say so in `needs_clarification`
+rather than guessing which of several current places to drop.
 
 ## Step 5: Clarification
 

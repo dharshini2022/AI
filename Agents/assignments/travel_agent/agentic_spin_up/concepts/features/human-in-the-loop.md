@@ -17,32 +17,89 @@ An earlier iteration of this project put all four human-facing tools (`ask_user`
 The fix wasn't to build resume plumbing for all four uniformly — it was to ask, per tool, *what kind of human interaction does this actually need?*
 
 - **`ask_user`** — pure data collection ("what's the value of X?"). Used for iterative requirement gathering (STEP 1, one field at a time), relaying sub-agent doubts, asking for a raised budget figure, and the plan confirm prompt (STEP 4: an empty answer means approved — see [scratchpad.md](scratchpad.md)). There's no proposed *action* to approve; the answer *is* the payload. The interrupt protocol's approve/edit/reject vocabulary has no slot for "here's arbitrary data" (the closest fit, `reject` with a `message`, frames every normal answer as a tool *error*, which is a workaround, not a fit).
-- **`choose_transport`** — picking one of several computed options. The interrupt fires *before* the tool runs, but the list of labeled options (with budget-adjusted totals) doesn't exist until the tool body actually executes several MCP calls. There's nothing to show the user at interrupt time. (A custom `wrapToolCall` middleware — which runs the real tool first, then interrupts with the real result — could make this fit properly; that's a separate, not-yet-built change, tracked apart from the two tools below.)
+- **`choose_transport`** — picking one of several fare-only options. There's nothing to approve here: the user is the one choosing, directly, from a list; nobody else's decision needs review.
 - **`set_indoor_mode`** — a single yes/no on one proposed action ("switch to indoor because of this forecast?"), with no data the tool needs to compute first. Genuine fit for `interruptOn`.
+- **`propose_change`** — a place agent tool, gated by `interruptOn`, used to swap one place, restaurant or accommodation for a candidate it just researched (a budget re-check, or the user's own edit request). Unlike `choose_transport`, the *thing being reviewed* (a candidate from a search) genuinely doesn't exist until a tool has run — so this is exactly the "run the real tool first, then interrupt with the real result" case the `choose_transport` note above used to flag as a future custom-middleware change. It's solved differently here: the search tool (`places_search`/`restaurants_search`/`accommodation_search`) runs and writes to a **draft** (`Scratchpad.setStaging`/`stagedOutput`), not live, and `propose_change` — the tool that *is* gated — is a second, separate call the place agent makes once it has decided what to propose. Its `description` is built by code from the live item and the staged candidate (`travel_agent/proposeChange.ts`), never from the model's own claim. See "The draft → propose → approve flow" below.
 - **`book_transportation`** (then named `book_flight`) — was once registered here too, but is no longer an LLM tool. It was consequential and admin-gated with fixed arguments, yet the model decided *when* to call it, and the approval pause fired before the role check, so a non-admin was asked to approve something they could never do. Booking is now a code-triggered step after the plan is confirmed (`offerBooking` in `mainAgent.ts`): code checks the role, shows the booking box, and asks a plain yes/no through `Hitl.askYesNo`. See [rbac.md](rbac.md).
 
-So `ask_user`, `choose_transport` and the booking yes/no stay plain, ungated `Hitl` calls. `set_indoor_mode` is the only tool registered under `interruptOn`, and the only one where the interrupt/resume cycle is completed end-to-end.
+So `ask_user` and `choose_transport` stay plain, ungated `Hitl` calls, and the booking yes/no is a code-triggered `Hitl.askYesNo`. `set_indoor_mode` and `propose_change` are registered under `interruptOn`, and are the two tools where the interrupt/resume cycle is completed end-to-end — `set_indoor_mode` for the Main Agent, `propose_change` for place_agent (only place_agent gets it; every other sub-agent's tools are still resolved from its spec's plain MCP tool list, see `SpinUp.placeAgentExtras` in `spinUp.ts`).
 
-```mermaid
-flowchart TD
-    MA[Main Agent proposes a tool call] --> D{Which tool?}
-    D -->|ask_user, choose_transport| S[Tool body calls Hitl directly<br/>readline/stdin, blocks in place]
-    D -->|set_indoor_mode| I[humanInTheLoopMiddleware: interrupt<br/>pauses the whole graph run, tool body not yet run]
-    I --> C[Agent.send catches __interrupt__]
-    C --> R[Hitl.reviewToolCalls shows the rendered<br/>description, collects approve/reject]
-    R --> Resume[graph.invoke Command resume decisions]
-    Resume -->|approve| T[Tool body finally runs for real]
-    Resume -->|reject| M[Synthetic ToolMessage returned instead<br/>tool body never runs]
-    S --> Done[Result flows back to the model]
-    T --> Done
-    M --> Done
+One lever doesn't fit either mechanism: switching transport from the over-budget menu is a **code-driven** re-pick (the user picks from a list `Hitl.handleTransportChoice` shows, same as the initial `choose_transport`), not an LLM tool call — so `humanInTheLoopMiddleware` has nothing to intercept. `switchTransport` (`mainAgent.ts`) shows its own before/after box and asks a plain `Hitl.askYesNo`, reusing the same "try N of 3" shape as `propose_change` without going through the interrupt/resume protocol at all.
+
+## The draft → propose → approve flow
+
+`humanInTheLoopMiddleware` pauses a tool call **before** it runs — fine when the thing to approve is already
+known (`set_indoor_mode`'s forecast), but a search result the user needs to see doesn't exist until *after*
+a tool has run. `propose_change` splits the two:
+
+```
+ place_agent                      code                           user
+ ───────────                      ────                           ────
+ places_search / restaurants_     Scratchpad.setStaging(true):
+ search / accommodation_search    the result goes to a DRAFT,
+ ─────────────────────────────►   not the live scratchpad slot
+                                   the rest of the app reads
+ propose_change(kind, day,        Middleware pauses the run;
+ replace, with) ──────────────►   description built from the
+                                   live item + the staged
+                                   candidate ───────────────►   sees the before/after box
+                                                                       │
+                       ┌───────── approve ◄─────────────────────── yes/no
+                       │                                              │
+              tool body commits                              reject: synthetic ToolMessage
+              draft → live                                    back to place_agent — the tool
+              (Scratchpad.commitStaged)                        body never runs; a rejection
+                                                                 counter and "don't propose
+                                                                 this candidate again" list
+                                                                 (ProposalTracker, tracked in
+                                                                 Hitl since the tool body can't
+                                                                 run here) drive the retry, up
+                                                                 to 3 tries per item, then
+                                                                 "limit_reached"
+```
+
+`recheckBudget`/`requestPlaceEdit` open staging before sending place_agent its turn and close it (discarding
+any leftover draft) in a `finally`, so a rejected or abandoned proposal never leaks into the next read — see
+`budget-recheck.md` and `concepts/architecture/scratchpad.md`.
+
+```
+ An agent proposes a tool call
+              │
+              ▼
+        which tool?
+     ┌────────┼─────────────────────────────┐
+     │                                       │
+ ask_user,                          set_indoor_mode (Main Agent)
+ choose_transport                   propose_change (place_agent)
+     │                                       │
+     ▼                                       ▼
+ Tool body calls Hitl            humanInTheLoopMiddleware: interrupt —
+ directly (readline/stdin),      pauses the whole graph run, tool body
+ blocks in place                 not yet run
+     │                                       │
+     │                           Agent.send catches __interrupt__
+     │                                       │
+     │                           Hitl.reviewToolCalls shows the
+     │                           rendered description, collects
+     │                           approve/reject
+     │                                       │
+     │                           graph.invoke(Command({resume: decisions}))
+     │                            ┌──────────┴──────────┐
+     │                        approve                 reject
+     │                            │                      │
+     │                    tool body finally      synthetic ToolMessage
+     │                    runs for real          returned instead — tool
+     │                            │              body never runs
+     └──────────────┬─────────────┴──────────────────────┘
+                     ▼
+          Result flows back to the model
 ```
 
 ---
 
 ## 2. The resume loop (`travel_agent/agent.ts`)
 
-`Agent.send()` is where the interrupt/resume cycle is actually closed. Only the Main Agent supplies a `resolveInterrupt` callback (sub-agents never register `interruptOn`, so they never hit this path):
+`Agent.send()` is where the interrupt/resume cycle is actually closed. The Main Agent supplies a `resolveInterrupt` callback directly; place_agent gets one too, but only when it's launched with a `Hitl` available (`SpinUp.placeAgentExtras` in `spinUp.ts`) — every other sub-agent never registers `interruptOn`, so it never hits this path:
 
 ```typescript
 async send(message: string, signal?: AbortSignal): Promise<Dict> {
@@ -60,7 +117,7 @@ async send(message: string, signal?: AbortSignal): Promise<Dict> {
 
 Looping (rather than resuming once) matters because resuming can itself land on another interrupt within the same turn. This confines all the new complexity to `Agent` — `MainAgentSession` and everything in `planTrip` (including the requirements-gathering and STEP-2-completion guardrails) still just call `session.send()` and get back a final `Dict`, unaware that a pause/resume cycle happened underneath.
 
-`Hitl.reviewToolCalls` (`travel_agent/hitl.ts`) is what `resolveInterrupt` delegates to — it renders each paused action's `description` (built from the pure `formatWeatherBox` string builder, so there's no I/O baked into the description itself; `formatBookingBox` is the same kind of builder, now printed directly by `offerBooking`) and collects an approve/reject decision per action, serialized through the same FIFO queue every other `Hitl` prompt uses.
+`Hitl.reviewToolCalls` (`travel_agent/hitl.ts`) is what `resolveInterrupt` delegates to — it renders each paused action's `description` (built from pure string builders with no I/O baked in: `formatWeatherBox` for `set_indoor_mode`, `formatChangeBox` in `tools/proposals.ts` for `propose_change`; `formatBookingBox` is the same kind of builder, printed directly by `offerBooking`) and collects an approve/reject decision per action, serialized through the same FIFO queue every other `Hitl` prompt uses. For `propose_change` specifically, a rejection also updates the `ProposalTracker` (`hitl.proposals`) and turns into a message telling place_agent whether to try a different candidate or stop — see "The draft → propose → approve flow" above for why that bookkeeping has to live here rather than in the tool body.
 
 ---
 
@@ -69,11 +126,13 @@ Looping (rather than resuming once) matters because resuming can itself land on 
 | Tool | Mechanism | Allowed Decisions | Why |
 |---|---|---|---|
 | `ask_user` | Plain `Hitl.handleSubagentClarification` (readline) | n/a | Free-text data collection — no action to approve |
-| `choose_transport` | Plain `Hitl.handleTransportChoice` (readline) | n/a | Options don't exist until the tool runs; interrupt-before-execution can't show them |
+| `choose_transport` | Plain `Hitl.handleTransportChoice` (readline) | n/a | The user is choosing directly from a list; nobody else's decision needs review |
 | `set_indoor_mode` | `humanInTheLoopMiddleware` interrupt/resume | `["approve", "reject"]` | Single yes/no on one proposed action, no precomputed data needed |
+| `propose_change` (place_agent only) | `humanInTheLoopMiddleware` interrupt/resume | `["approve", "reject"]` | One specific swap, from a draft the search just produced — see the flow above |
+| "Switch transport" (over-budget menu lever, not a tool) | Code-driven re-pick + `Hitl.askYesNo` | n/a | The pick itself is the user choosing from a list, same as `choose_transport`; there's no LLM tool call for the middleware to gate |
 | booking (`offerBooking`, not a tool) | Code-triggered `Hitl.askYesNo` after the plan | n/a | Fixed action with known arguments; role check must decide what to show, so it lives in code |
 
-For `set_indoor_mode`, the tool body itself only runs *after* approval — it no longer does its own prompting. `setIndoorMode`'s body just reports the outcome (`{ approved: true, indoor_mode: enabled ?? true }`).
+For `set_indoor_mode` and `propose_change`, the tool body itself only runs *after* approval — neither does its own prompting. `setIndoorMode`'s body just reports the outcome (`{ approved: true, indoor_mode: enabled ?? true }`); `propose_change`'s body commits the draft to live (`Scratchpad.commitStaged`).
 
 RBAC (see [rbac.md](rbac.md)) is a separate control from approval: it restricts *who* may book at all, while the yes/no governs *whether that specific booking proceeds*.
 

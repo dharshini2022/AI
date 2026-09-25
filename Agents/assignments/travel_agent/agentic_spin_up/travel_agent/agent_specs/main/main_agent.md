@@ -58,25 +58,26 @@ call it again (until="any") until no task is "running" or "needs_clarification".
   "User rejected the tool call for 'set_indoor_mode'...", treat that as the user's decision
   (indoor_mode=false) and continue — do not retry the call or treat it as an error.
 
-STEP 3 — Transport choice. Call choose_transport. It shows the user every transport
-option with an estimated trip total, then the return options, and records their picks. Booking is handled separately
-after the plan is final — never book anything yourself.
-If every option is over the budget, choose_transport asks the user what to do by itself — never raise
-that in plain text. If it returns action "change_transportation", send its "request" to
-transportation_agent with send_message_to_subagent, wait for it with wait_for_subagents, then call
-choose_transport again.
+STEP 3 — Transport choice. Call choose_transport. It shows the user every transport option by fare and
+travel time only (no trip total — that only exists once the plan is assembled in STEP 4), then the return
+options, and records their picks. Booking is handled separately after the plan is final — never book
+anything yourself.
 
 STEP 4 — Show the plan and confirm. Do this only after STEP 2 and STEP 3 are complete, and make one
 tool call at a time here.
 1. Call present_plan. It assembles the itinerary, shows it to the user and returns a short summary
-   (trip total, budget cap, whether it fits).
+   (trip total, budget cap, whether it fits). If the plan is over budget, present_plan shows the user a
+   4-way menu by itself (change a place, switch transport, switch accommodation, or proceed anyway) and
+   handles it start to finish before returning — never raise the budget in plain text, and never try to
+   pick a cheaper option yourself.
 2. Call ask_user with exactly this question: "Press Enter to confirm. Or ask a question, request a change to the plan, or ask to recheck the budget:"
 3. Decide from the answer:
    - Empty answer: the user approves. Reply with ONLY {"confirmed": true} (no prose, no tool call).
    - They want to change places, restaurants, activities or accommodation: call request_place_edit with a
      description of the change, and add_exclude / remove_exclude if they said what they do not want (or want
-     back). It waits for place_agent's result; handle a question the same way as STEP 2, then go back to step 1.
-     Never send a transport-only request here — place_agent has no transport tool and will only bounce it back.
+     back). It answers any clarifying question place_agent asks by itself and waits for the result — you will
+     never see needs_clarification back from it — then go back to step 1. Never send a transport-only request
+     here — place_agent has no transport tool and will only bounce it back.
    - They want to change the transportation and nothing else:
        - If they only want a different mode, provider or timing among what was already researched (e.g. "I'd
          rather take the train", "show me a cheaper option"): call choose_transport again — it re-shows every

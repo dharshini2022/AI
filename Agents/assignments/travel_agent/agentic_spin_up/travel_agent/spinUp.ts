@@ -5,12 +5,19 @@ import { tool } from "langchain";
 import { z } from "zod";
 import { Agent } from "./agent.ts";
 import { settings } from "./config.ts";
+import type { Hitl } from "./hitl.ts";
 import type { McpTools } from "./mcpClient.ts";
+import { createProposeChangeMiddleware, createProposeChangeTool } from "./proposeChange.ts";
 import type { Principal } from "./rbac/rbac.ts";
 import type { Scratchpad } from "./scratchpad.ts";
 import { listSpecs, loadSpec } from "./specs.ts";
-import { type Dict, truthy } from "./tools/util.ts";
+import { type Dict, pyTitle, truthy } from "./tools/util.ts";
 import { isValidFutureDate } from "./validation.ts";
+
+// The only sub-agent that can propose a place/restaurant/accommodation change — see
+// current_implementation.md step 4. Kept as a plain string, not imported from mainAgent.ts, so this module
+// never has to import from the Main Agent's own file.
+const PLACE_AGENT_SPEC = "place_agent";
 
 export type SubagentStatus = "running" | "done" | "needs_clarification" | "failed" | "stopped";
 
@@ -76,15 +83,20 @@ export class SpinUp {
   private summarize: ResearchSummary;
   private principal: Principal;
   readonly scratchpad: Scratchpad;
+  // Only place_agent is launched with propose_change wired in (see launch() below) — needed to resolve its
+  // interrupts and to build the approval box. Optional so tests that never trigger a proposal (e.g.
+  // subagents.test.ts) can keep constructing a SpinUp without a Hitl.
+  private hitl?: Hitl;
   private checkpointer = new MemorySaver();
   private records = new Map<string, SubagentTask>();
   private counters = new Map<string, number>();
 
-  constructor(mcp: McpTools, summarize: ResearchSummary, principal: Principal, scratchpad: Scratchpad) {
+  constructor(mcp: McpTools, summarize: ResearchSummary, principal: Principal, scratchpad: Scratchpad, hitl?: Hitl) {
     this.mcp = mcp;
     this.summarize = summarize;
     this.principal = principal;
     this.scratchpad = scratchpad;
+    this.hitl = hitl;
   }
 
   launch(specName: string, task: Dict = {}): SubagentTask {
@@ -119,11 +131,32 @@ export class SpinUp {
         onToolResult: (name, result, input) => this.scratchpad.record(name, input, result),
         guard: (name, input) => this.scratchpad.pin(name, input),
         facts: () => this.scratchpad.factsBlock(),
+        ...this.placeAgentExtras(specName, spec.tools),
       }),
     };
     this.records.set(id, record);
     record.done = this.runTurn(record, JSON.stringify(task));
     return record;
+  }
+
+  // Only place_agent gets propose_change and its approval gate — every other sub-agent's tools stay exactly
+  // as spec.tools resolves them against the MCP server (see current_implementation.md step 4). Without a
+  // Hitl (e.g. a test that never triggers a proposal), place_agent falls back to its plain MCP tools too.
+  private placeAgentExtras(specName: string, toolNames: string[]) {
+    if (specName !== PLACE_AGENT_SPEC || !this.hitl) return {};
+    const hitl = this.hitl;
+    const label = pyTitle(specName.replaceAll("_", " "));
+    const mcpTools = this.mcp.langchainTools(
+      toolNames,
+      label,
+      (name, result, input) => this.scratchpad.record(name, input, result),
+      (name, input) => this.scratchpad.pin(name, input),
+    );
+    return {
+      tools: [...mcpTools, createProposeChangeTool(this.scratchpad, hitl.proposals)],
+      middleware: [createProposeChangeMiddleware(this.scratchpad, hitl.proposals)],
+      resolveInterrupt: (request: Parameters<Hitl["reviewToolCalls"]>[0]) => hitl.reviewToolCalls(request),
+    };
   }
 
   // Idle sub-agents start a new turn at once; busy ones receive the message as their next turn.

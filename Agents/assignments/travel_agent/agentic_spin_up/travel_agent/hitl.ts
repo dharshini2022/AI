@@ -3,6 +3,7 @@ import type { HITLRequest, HITLResponse } from "langchain";
 import { z } from "zod";
 import type { StdinChannel } from "./stdin.ts";
 import { type BookingDetails, type BudgetRecheck, renderCards } from "./tools/index.ts";
+import { MAX_PROPOSAL_TRIES, type ProposalKind, ProposalTracker } from "./tools/proposals.ts";
 import type { Dict } from "./tools/util.ts";
 
 const YES = new Set(["y", "yes", "ok", "sure", "yeah"]);
@@ -55,6 +56,10 @@ export class Hitl {
   private scripted: string[];
   private stdin?: StdinChannel;
   private queue: Promise<unknown> = Promise.resolve();
+  // Tracks propose_change retries across the whole trip. The tool body never runs on a rejected interrupt
+  // (see concepts/features/human-in-the-loop.md), so the retry count has to live on the client side of the
+  // interrupt/resume cycle — here — rather than inside the tool itself.
+  readonly proposals = new ProposalTracker();
 
   constructor(answers: string[] = [], stdin?: StdinChannel) {
     this.scripted = [...answers];
@@ -136,7 +141,13 @@ export class Hitl {
         console.log(action.description ?? `\nTool execution requires approval\n\nTool: ${action.name}`);
         const raw = await this.input(`Approve ${action.name}? (yes/no)\n> `);
         if (YES.has(raw.trim().toLowerCase()) && config.allowedDecisions.includes("approve")) {
+          if (action.name === "propose_change") this.proposals.reset(this.proposalKey(action.args));
           decisions.push({ type: "approve" });
+        } else if (action.name === "propose_change") {
+          // A rejected interrupt never runs the tool body (see concepts/features/human-in-the-loop.md), so the
+          // retry bookkeeping — and the "try a different option" / "give up" instruction sent back to the
+          // agent — happens here, on the client side of the interrupt, instead of in the tool itself.
+          decisions.push({ type: "reject", message: this.rejectProposal(action.args) });
         } else {
           const reason = await this.input("Reason (optional):\n> ");
           decisions.push({ type: "reject", message: reason || undefined });
@@ -144,6 +155,21 @@ export class Hitl {
       }
       return { decisions };
     });
+  }
+
+  private proposalKey(args: Dict): string {
+    return this.proposals.key(args.kind as ProposalKind, String(args.replace ?? ""));
+  }
+
+  private rejectProposal(args: Dict): string {
+    const key = this.proposalKey(args);
+    const candidate = String(args.with ?? "");
+    const attempts = this.proposals.recordRejection(key, candidate);
+    if (attempts >= MAX_PROPOSAL_TRIES) {
+      return `limit_reached: the user has said no ${MAX_PROPOSAL_TRIES} times for this change. Stop proposing it, leave '${args.replace}' as it is, and tell the user this specific change is not possible.`;
+    }
+    return `The user said no to replacing '${args.replace}' with '${candidate}' (${attempts} of ${MAX_PROPOSAL_TRIES} tries used). ` +
+      `Propose a different candidate for the same change — never '${candidate}' again.`;
   }
 
   showPlan(itinerary: Dict, budgetStatus: Dict | null, recheck: BudgetRecheck | null = null): void {
