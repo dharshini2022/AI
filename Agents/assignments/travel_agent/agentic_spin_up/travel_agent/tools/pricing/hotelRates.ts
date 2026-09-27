@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { settings } from "../../config.ts";
-import { type Dict, pyOr, pyStr, readJsonFile } from "../util.ts";
+import { type Dict, pyOr, pyStr, readJsonFile, wordToStars } from "../util.ts";
 
 const Rates = z.object({
   stars: z.object({
@@ -25,7 +25,6 @@ function data() {
   return loaded.data;
 }
 
-const WORD_STARS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
 const STAR_TEXT = /\b([1-5]|one|two|three|four|five)[\s-]?stars?\b/i;
 
 // The hotel's star class (1 to 5), or null when the listing does not say. Search results carry no class
@@ -35,7 +34,7 @@ const STAR_TEXT = /\b([1-5]|one|two|three|four|five)[\s-]?stars?\b/i;
 export function hotelStars(place: Dict): number | null {
   const text = [pyOr(place.title, place.name, ""), place.type, place.description].filter(Boolean).map(pyStr).join(" | ");
   const stated = STAR_TEXT.exec(text)?.[1].toLowerCase();
-  if (stated) return WORD_STARS[stated] ?? Number(stated);
+  if (stated) return wordToStars(stated);
   return data().kinds[pyStr(pyOr(place.type, "")).trim().toLowerCase()] ?? null;
 }
 

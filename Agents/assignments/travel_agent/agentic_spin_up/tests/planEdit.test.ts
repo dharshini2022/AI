@@ -121,7 +121,7 @@ vi.mock("../travel_agent/mcpClient.ts", async (importOriginal) => {
 });
 
 const { Hitl } = await import("../travel_agent/hitl.ts");
-const { can } = await import("../travel_agent/rbac/rbac.ts");
+const { canAccess } = await import("../travel_agent/rbac/rbac.ts");
 const { planTrip } = await import("../travel_agent/mainAgent.ts");
 
 const activities = (itinerary: any): string[] => itinerary.cards.flatMap((c: any) => c.activities.map((a: any) => a.name));
@@ -177,7 +177,7 @@ describe("permissions", () => {
     script.state.toolNames.clear();
     await planTrip("trip", { hitl: new Hitl(["1", "1", ""]) });
     expect(script.state.toolNames.size).toBeGreaterThan(10);
-    const denied = [...script.state.toolNames].filter((name) => !can({ id: "user-1", role: "user" }, name));
+    const denied = [...script.state.toolNames].filter((name) => !canAccess({ id: "user-1", role: "user" }, name));
     expect(denied).toEqual([]);
   });
 });

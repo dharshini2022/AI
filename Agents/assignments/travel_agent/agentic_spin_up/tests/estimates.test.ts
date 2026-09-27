@@ -572,7 +572,7 @@ describe("the return journey (transport counted for both legs)", () => {
     )) as any;
     expect(budget_status.breakdown.transport).toBe(6000);
     expect(budget_status.total).toBe(6000);
-    expect(budget_status.transport_legs).toBe(2);
+    expect(budget_status.has_return_leg).toBe(false);
     // one way fits the 5000 cap, there and back does not
     expect(budget_status.ok).toBe(false);
     expect(budget_status.overage).toBe(1000);
@@ -597,6 +597,7 @@ describe("the return journey (transport counted for both legs)", () => {
     expect(budget_status.breakdown.transport).toBe(4200); // not 3000 × 2
     expect(budget_status.total).toBe(4200);
     expect(budget_status.estimated_total).toBe(1200);
+    expect(budget_status.has_return_leg).toBe(true);
   });
 
   it("shows Outbound and Return lines when a return leg was chosen, and one Transport line when not", async () => {
@@ -626,7 +627,7 @@ describe("the return journey (transport counted for both legs)", () => {
   it("the plan says the return is included in the transport figure", async () => {
     const { itinerary, budget } = await setup();
     const plan = { route: "A → B", transport: { option: "Bus", travel_time: "~7h", approx_fare: "₹600" }, accommodation: {}, cards: [] };
-    const withLegs = { ...budget.checkBudget(1200, 0, 2, 1, 0, null), transport_legs: 2 };
+    const withLegs = { ...budget.checkBudget(1200, 0, 2, 1, 0, null), has_return_leg: true };
     expect(itinerary.renderCards(plan, withLegs)).toContain("transport ₹1200 (return included)");
     expect(itinerary.renderCards(plan, budget.checkBudget(1200, 0, 2, 1, 0, null))).not.toContain("return included");
   });

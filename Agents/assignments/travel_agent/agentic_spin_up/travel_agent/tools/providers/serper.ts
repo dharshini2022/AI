@@ -1,8 +1,7 @@
 import { settings } from "../../config.ts";
-import { cached } from "../cache.ts";
 import { requestJsonDetailed } from "../http.ts";
 import { type Dict, get, numStr, pyOr, pyStr } from "../util.ts";
-import { type MapsProvider, isEnabled, limit, noteFailure } from "./shared.ts";
+import { type MapsProvider, isEnabled, providerCall } from "./shared.ts";
 
 const SERPER_URL = "https://google.serper.dev/maps";
 const SERPER_WEB_URL = "https://google.serper.dev/search";
@@ -31,18 +30,16 @@ export const serperProvider: MapsProvider = {
 // A failure is not cached; an answer is, since these facts change slowly.
 export async function serperWebSearch(query: string, signal?: AbortSignal): Promise<{ title: string; snippet: string }[] | null> {
   if (!isEnabled("serper")) return null;
-  return cached<{ title: string; snippet: string }[]>(`web|${query}`.toLowerCase(), () =>
-    limit(async () => {
-      const { body, failure } = await requestJsonDetailed("POST", SERPER_WEB_URL, {
+  return providerCall(
+    "serper",
+    `web|${query}`.toLowerCase(),
+    () =>
+      requestJsonDetailed("POST", SERPER_WEB_URL, {
         headers: { "X-API-KEY": settings.serperApiKey },
         json: { q: query, gl: "in", hl: "en", num: 5 },
         timeoutMs: settings.searchTimeoutMs,
         signal,
-      });
-      noteFailure("serper", failure);
-      if (failure) return null;
-      const organic = (pyOr(get(body, "organic"), []) as Dict[]).slice(0, 5);
-      return { value: organic.map((r) => ({ title: pyStr(pyOr(r.title, "")), snippet: pyStr(pyOr(r.snippet, "")) })), fallback: false };
-    }),
+      }),
+    (body) => (pyOr(get(body, "organic"), []) as Dict[]).slice(0, 5).map((r) => ({ title: pyStr(pyOr(r.title, "")), snippet: pyStr(pyOr(r.snippet, "")) })),
   );
 }

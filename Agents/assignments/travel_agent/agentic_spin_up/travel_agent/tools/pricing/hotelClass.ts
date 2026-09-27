@@ -1,7 +1,6 @@
 import { settings } from "../../config.ts";
 import { serperWebSearch } from "../providers/serper.ts";
-
-const WORD_STARS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+import { wordToStars } from "../util.ts";
 
 // A class stated as a kind of hotel: "five star Luxury Resort", "a luxurious 5-star resort", "Classified 5
 // Star Resort". It must be followed by a hotel word, so a guest score ("rated 4 out of 5 stars", "5 star
@@ -25,7 +24,7 @@ export function classFromResults(name: string, city: string, results: { title: s
     const present = new Set(words(text));
     if (!distinctive.every((w) => present.has(w))) continue;
     const stated = CLASS_PHRASE.exec(text)?.[1].toLowerCase();
-    if (stated) return WORD_STARS[stated] ?? Number(stated);
+    if (stated) return wordToStars(stated);
   }
   return null;
 }

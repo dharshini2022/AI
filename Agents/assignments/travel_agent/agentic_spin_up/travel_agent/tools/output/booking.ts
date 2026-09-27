@@ -1,4 +1,4 @@
-import { type Principal, can } from "../../rbac/rbac.ts";
+import { type Principal, canAccess } from "../../rbac/rbac.ts";
 import type { Dict } from "../util.ts";
 
 // One booked leg, ready to print or email.
@@ -30,7 +30,7 @@ export function describeLeg(leg: BookedLeg): string[] {
 }
 
 export function bookTransportation(principal: Principal, details: BookingDetails): Dict {
-  if (!can(principal, "book_transportation")) {
+  if (!canAccess(principal, "book_transportation")) {
     return {
       success: false,
       error: `Permission denied: Role '${principal.role}' is not authorized to book transportation. Only admin can book transportation.`,

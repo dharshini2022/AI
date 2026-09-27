@@ -5,7 +5,7 @@ RBAC decides which tools a role may call. There are two roles: `user` and `admin
 
 ## The check is plain code, not an LLM
 
-The check is a lookup in `travel_agent/rbac.ts`: `can(principal, toolName)` asks whether
+The check is a lookup in `travel_agent/rbac.ts`: `canAccess(principal, toolName)` asks whether
 the role's list contains the tool. Anything not listed is denied. The role comes from the
 CLI (`--admin`, `--role=admin`, or the `ROLE` env var), so the model cannot change it. The
 model only sees a "Permission denied" message and can explain it to the user.
@@ -41,12 +41,12 @@ skip the middleware. They are fixed steps, not an LLM's choice, so a role check 
 ## Booking flow (admin only, code-triggered)
 
 `book_transportation` is not an LLM tool. After the user confirms the final plan, `offerBooking`
-(`travel_agent/mainAgent.ts`) runs as plain code. It checks `can(principal, "book_transportation")` first,
+(`travel_agent/mainAgent.ts`) runs as plain code. It checks `canAccess(principal, "book_transportation")` first,
 because hiding an option is a display decision the middleware cannot make.
 
 ```mermaid
 flowchart TD
-    A["Plan confirmed (user presses Enter)"] --> B{"can(role, book_transportation)?"}
+    A["Plan confirmed (user presses Enter)"] --> B{"canAccess(role, book_transportation)?"}
     B -- user --> C["Print: Book Transportation is available to admins only. Login as admin to book."]
     B -- admin --> D["Show booking box, ask: Book this transportation? yes/no"]
     D -- yes --> E["bookTransportation: print booking reference, then offer to email both legs"]
@@ -57,7 +57,7 @@ Why code and not the LLM: booking has no judgement in it (the details are fixed 
 plan), and when the model decided it, it booked before the plan existed and the approval prompt
 appeared before the role check. Non-admins now never see a booking prompt.
 
-`bookTransportation` (`travel_agent/tools/booking.ts`) calls `can` again on its own, so a non-admin is
+`bookTransportation` (`travel_agent/tools/booking.ts`) calls `canAccess` again on its own, so a non-admin is
 refused even if `offerBooking` were changed. That is the enforcement; the check in `offerBooking`
 only decides what to show.
 

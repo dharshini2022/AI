@@ -1,5 +1,6 @@
 import { settings } from "../../config.ts";
 import { createLimiter } from "../../limiter.ts";
+import { type Sourced, cached } from "../cache.ts";
 import type { LatLon } from "../search/geo.ts";
 import type { HttpFailure } from "../http.ts";
 import type { Dict } from "../util.ts";
@@ -16,7 +17,7 @@ export const limit = createLimiter(settings.searchConcurrency);
 const apiKey = (name: string) => (name === "serpapi" ? settings.serpapiApiKey : name === "serper" ? settings.serperApiKey : "");
 
 // Listed in MAPS_PROVIDER and has a key.
-export const isConfigured = (name: string) => settings.mapsProviders.includes(name) && Boolean(apiKey(name));
+const isConfigured = (name: string) => settings.mapsProviders.includes(name) && Boolean(apiKey(name));
 
 // A provider that ran out of quota, or whose key was refused, stays off for the rest of the process so
 // the remaining calls in a trip do not each wait on it. A plain rate limit does not switch it off.
@@ -44,3 +45,21 @@ export function searchProblem(): string | null {
 
 // True when a provider other than the first configured one answered.
 export const isFallback = (name: string) => settings.mapsProviders.find(isConfigured) !== name;
+
+// One cached, concurrency-limited call to a provider: run `request`, record its outcome so
+// searchProblem()/isEnabled() see it, and cache the extracted value (never the raw failure).
+// Shared by every provider so a fix to this wrapping only needs to happen once.
+export async function providerCall<T>(
+  name: string,
+  key: string,
+  request: () => Promise<{ body: Dict; failure: HttpFailure | null }>,
+  extract: (body: Dict) => T,
+): Promise<T | null> {
+  return cached<T>(key, () =>
+    limit(async (): Promise<Sourced<T> | null> => {
+      const { body, failure } = await request();
+      noteFailure(name, failure);
+      return failure ? null : { value: extract(body), fallback: isFallback(name) };
+    }),
+  );
+}

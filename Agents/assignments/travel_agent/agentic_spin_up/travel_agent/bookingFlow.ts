@@ -2,7 +2,7 @@
 // runs once the plan is final and the admin says yes. See concepts/rbac.md and concepts/booking-email.md.
 import { formatBookingBox, type Hitl } from "./hitl.ts";
 import type { Plan } from "./mainAgent.ts";
-import { type Principal, can } from "./rbac/rbac.ts";
+import { type Principal, canAccess } from "./rbac/rbac.ts";
 import { type BookedLeg, type BookingDetails, bookTransportation, fareText, mailConfigured, sendBookingEmail } from "./tools/index.ts";
 import { type Dict, addDays, get, truthy } from "./tools/util.ts";
 
@@ -50,7 +50,7 @@ async function emailBooking(channel: Hitl, details: BookingDetails, reference: s
 }
 
 export async function offerBooking(principal: Principal, channel: Hitl, plan: Plan): Promise<Dict | null> {
-  if (!can(principal, "book_transportation")) {
+  if (!canAccess(principal, "book_transportation")) {
     console.log("\nBook Transportation is available to admins only. Login as admin (run with --admin) to book this transportation.");
     return null;
   }

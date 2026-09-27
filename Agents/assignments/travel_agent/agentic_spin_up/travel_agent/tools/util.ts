@@ -10,6 +10,12 @@ export function readJsonFile<T>(path: string, schema: z.ZodType<T>): T {
   return parsed.data;
 }
 
+// "one".."five" or a digit "1".."5" -> the star count, as spelled out in hotel listings/search text.
+const WORD_STARS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+export function wordToStars(stated: string): number {
+  return WORD_STARS[stated.toLowerCase()] ?? Number(stated);
+}
+
 export function isDict(v: unknown): v is Dict {
   return v !== null && typeof v === "object" && !Array.isArray(v);
 }

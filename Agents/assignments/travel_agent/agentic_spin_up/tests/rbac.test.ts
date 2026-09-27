@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Agent } from "../travel_agent/agent.ts";
 import { formatWeatherBox, Hitl } from "../travel_agent/hitl.ts";
 import { offerBooking, type Plan } from "../travel_agent/mainAgent.ts";
-import { can, resolvePrincipal } from "../travel_agent/rbac/rbac.ts";
+import { canAccess, resolvePrincipal } from "../travel_agent/rbac/rbac.ts";
 import { createRbacMiddleware } from "../travel_agent/rbac/rbacMiddleware.ts";
 import { listSpecs, loadSpec } from "../travel_agent/specs.ts";
 import { bookTransportation, type BookingDetails } from "../travel_agent/tools/output/booking.ts";
@@ -48,25 +48,25 @@ describe("Role-Based Access Control (RBAC)", () => {
     delete process.env.ROLE;
   });
 
-  it("can enforces permissions for user vs admin", () => {
+  it("canAccess enforces permissions for user vs admin", () => {
     const user = { id: "u1", role: "user" as const };
     const admin = { id: "a1", role: "admin" as const };
 
     // Common search permissions
-    expect(can(user, "places_search")).toBe(true);
-    expect(can(user, "transport_search")).toBe(true);
-    expect(can(user, "set_indoor_mode")).toBe(true);
-    expect(can(user, "choose_transport")).toBe(true);
-    for (const tool of ["extract_requirements", "update_preferences", "present_plan"]) expect(can(user, tool)).toBe(true);
+    expect(canAccess(user, "places_search")).toBe(true);
+    expect(canAccess(user, "transport_search")).toBe(true);
+    expect(canAccess(user, "set_indoor_mode")).toBe(true);
+    expect(canAccess(user, "choose_transport")).toBe(true);
+    for (const tool of ["extract_requirements", "update_preferences", "present_plan"]) expect(canAccess(user, tool)).toBe(true);
 
-    expect(can(admin, "places_search")).toBe(true);
-    expect(can(admin, "transport_search")).toBe(true);
-    expect(can(admin, "set_indoor_mode")).toBe(true);
-    expect(can(admin, "choose_transport")).toBe(true);
+    expect(canAccess(admin, "places_search")).toBe(true);
+    expect(canAccess(admin, "transport_search")).toBe(true);
+    expect(canAccess(admin, "set_indoor_mode")).toBe(true);
+    expect(canAccess(admin, "choose_transport")).toBe(true);
 
     // Privileged booking permission
-    expect(can(user, "book_transportation")).toBe(false);
-    expect(can(admin, "book_transportation")).toBe(true);
+    expect(canAccess(user, "book_transportation")).toBe(false);
+    expect(canAccess(admin, "book_transportation")).toBe(true);
   });
 
   it("bookTransportation denies user and confirms for admin", () => {
@@ -137,7 +137,7 @@ describe("Role-Based Access Control (RBAC)", () => {
   it("every tool named in an agent spec is allowed for the user role", () => {
     const user = { id: "u1", role: "user" as const };
     for (const name of listSpecs()) {
-      for (const tool of loadSpec(name).tools) expect(can(user, tool), `${name} uses ${tool}`).toBe(true);
+      for (const tool of loadSpec(name).tools) expect(canAccess(user, tool), `${name} uses ${tool}`).toBe(true);
     }
   });
 

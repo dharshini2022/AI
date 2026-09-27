@@ -316,7 +316,7 @@ function buildDayCards(layoutDays: Dict[], forecast: Dict, restaurants: unknown,
     return {
       day: i + 1,
       date: pyOr(get(w, "date"), get(d, "date"), `Day ${i + 1}`),
-      note: farNote ? get(d, "note") + farNote : get(d, "note"),
+      note: farNote ? pyOr(get(d, "note"), "") + farNote : get(d, "note"),
       weather: {
         condition: get(w, "condition", "unknown"),
         temp: get(w, "temp"),
@@ -485,7 +485,7 @@ export function renderCards(itinerary: Dict, budget: Dict | null = null, recheck
     const bd = budget.breakdown;
     out.push(`  Budget    : ₹${fmtFixed(budget.total, 0)}${cap}  (${verdict})`);
     out.push(
-      `              transport ₹${fmtFixed(bd.transport, 0)}${budget.transport_legs > 1 ? " (return included)" : ""} · lodging ₹${fmtFixed(bd.lodging, 0)} · ` +
+      `              transport ₹${fmtFixed(bd.transport, 0)}${truthy(budget.has_return_leg) ? " (return included)" : " (return not booked yet — outbound fare doubled as a placeholder)"} · lodging ₹${fmtFixed(bd.lodging, 0)} · ` +
         `food ₹${fmtFixed(bd.food, 0)} · activities ₹${fmtFixed(bd.activities, 0)}`,
     );
     if (truthy(budget.estimated_total)) {

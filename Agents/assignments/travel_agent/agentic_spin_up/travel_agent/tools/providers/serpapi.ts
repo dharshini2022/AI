@@ -1,9 +1,8 @@
 import { settings } from "../../config.ts";
-import { cached } from "../cache.ts";
 import { requestJsonDetailed } from "../http.ts";
 import { type PriceAndUrl, extractPriceAndUrl } from "../pricing/prices.ts";
 import { type Dict, get, isDict, numStr, pyOr, pyStr, truthy } from "../util.ts";
-import { type MapsProvider, isEnabled, isFallback, limit, noteFailure } from "./shared.ts";
+import { type MapsProvider, isEnabled, providerCall } from "./shared.ts";
 
 const SERPAPI_URL = "https://serpapi.com/search";
 
@@ -61,9 +60,11 @@ export const serpapiProvider: MapsProvider = {
 export async function serpapiHotels(destination: string, adults: number, checkIn: string, checkOut: string, signal?: AbortSignal): Promise<Dict[]> {
   if (!isEnabled("serpapi")) return [];
   const key = `hotels|${destination}|${checkIn}|${checkOut}|${adults}`.toLowerCase();
-  const properties = await cached<Dict[]>(key, () =>
-    limit(async () => {
-      const { body, failure } = await request(
+  const properties = await providerCall(
+    "serpapi",
+    key,
+    () =>
+      request(
         {
           engine: "google_hotels",
           q: `hotels in ${destination}`,
@@ -75,10 +76,8 @@ export async function serpapiHotels(destination: string, adults: number, checkIn
           hl: "en",
         },
         signal,
-      );
-      noteFailure("serpapi", failure);
-      return failure ? null : { value: pyOr(get(pyOr(body, {}), "properties"), []), fallback: isFallback("serpapi") };
-    }),
+      ),
+    (body) => pyOr(get(pyOr(body, {}), "properties"), []),
   );
   return properties ?? [];
 }
